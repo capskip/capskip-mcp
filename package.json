@@ -1,7 +1,7 @@
 {
   "name": "capskip-mcp",
   "version": "1.0.0",
-  "description": "MCP server for the CapSkip local captcha solver",
+  "description": "Captcha solver MCP server for AI agents: solve reCAPTCHA v2/v3, Cloudflare Turnstile, GeeTest and image captchas via CapSkip, a local unlimited captcha solver with no per-solve fees.",
   "main": "./dist/server.js",
   "exports": {
     ".": "./dist/server.js",
@@ -15,8 +15,15 @@
     "test": "npm run build && node --test"
   },
   "keywords": [
-    "mcp", "model-context-protocol", "captcha", "captcha-solver",
-    "recaptcha", "turnstile", "geetest", "capskip", "automation"
+    "mcp", "mcp-server", "model-context-protocol",
+    "captcha", "captcha-solver", "captcha-solving", "captcha-bypass",
+    "unlimited-captcha-solver", "local-captcha-solver", "free-captcha-solver",
+    "recaptcha", "recaptcha-solver", "recaptcha-v2", "recaptcha-v3", "recaptcha-enterprise",
+    "turnstile", "turnstile-solver", "cloudflare-turnstile",
+    "geetest", "geetest-solver", "image-captcha", "ocr",
+    "2captcha-alternative", "anti-captcha-alternative",
+    "ai-agent", "browser-automation", "web-scraping",
+    "claude", "cursor", "vscode", "capskip"
   ],
   "author": "CapSkip <support@capskip.com>",
   "license": "MIT",
