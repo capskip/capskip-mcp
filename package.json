@@ -1,0 +1,32 @@
+{
+  "name": "capskip-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for the CapSkip local captcha solver",
+  "main": "dist/index.js",
+  "bin": { "capskip-mcp": "dist/index.js" },
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "npm run build && node --test test/"
+  },
+  "keywords": [
+    "mcp", "model-context-protocol", "captcha", "captcha-solver",
+    "recaptcha", "turnstile", "geetest", "capskip", "automation"
+  ],
+  "author": "CapSkip <support@capskip.com>",
+  "license": "MIT",
+  "homepage": "https://capskip.com",
+  "repository": { "type": "git", "url": "git+https://github.com/capskip/capskip-mcp.git" },
+  "bugs": { "url": "https://github.com/capskip/capskip-mcp/issues" },
+  "files": ["dist", "docs", "examples", "CHANGELOG.md", "SECURITY.md"],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "capskip": "^1.1.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
