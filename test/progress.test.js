@@ -32,24 +32,34 @@ test('emits notifications while running', async () => {
 
 test('progress increases monotonically and never exceeds total', async () => {
   const sent = [];
+  // totalSeconds is deliberately shorter than the run: the ticker must reach
+  // and stay at the ceiling. A longer total than the test's own duration would
+  // never exercise the clamp, so removing Math.min would go undetected.
+  const TOTAL = 0.05;
   const stop = startProgress({
     sendNotification: async (n) => { sent.push(n); },
     progressToken: 7,
-    totalSeconds: 1,
+    totalSeconds: TOTAL,
     label: 'Solving',
     intervalMs: 20,
   });
 
-  await delay(120);
+  await delay(150);
   stop();
 
   const values = sent.map((n) => n.params.progress);
+  assert.ok(values.length >= 3, `expected several notifications, got ${values.length}`);
+
   for (let i = 1; i < values.length; i += 1) {
     assert.ok(values[i] >= values[i - 1], `progress went backwards: ${values}`);
   }
   for (const value of values) {
-    assert.ok(value <= 1, `progress ${value} exceeded total 1`);
+    assert.ok(value <= TOTAL, `progress ${value} exceeded total ${TOTAL}`);
   }
+  assert.ok(
+    values.some((value) => value === TOTAL),
+    `the clamp never engaged — expected some value pinned at ${TOTAL}, got ${values}`,
+  );
 });
 
 test('no token means no timer and no notifications', async () => {
