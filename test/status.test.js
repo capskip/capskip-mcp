@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { startHarness } = require('./helpers/harness.js');
+const { startHarness } = require('../test-helpers/harness.js');
 
 test('all five tools are advertised with the capskip_ prefix', async () => {
   const { client, close } = await startHarness();

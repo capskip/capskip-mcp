@@ -3,7 +3,7 @@
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 
-const { createServer } = require('../../dist/server.js');
+const { createServer } = require('../dist/server.js');
 const { startMockServer } = require('./mockServer.js');
 
 /**
