@@ -9,7 +9,10 @@ import type { ToolContext } from '../solver.js';
 const PROBE_TIMEOUT_MS = 3000;
 
 // A CapSkip res.php reply is a few dozen bytes. Anything else on this port could
-// stream indefinitely, so stop accumulating well before that becomes a problem.
+// stream indefinitely, so cap what we buffer and destroy the request once the
+// cap is hit. That matters for time, not just memory: `timeout` below only
+// fires on a gap in activity, so a peer that keeps sending data — resetting
+// that inactivity clock — would otherwise hold the probe open indefinitely.
 const MAX_BODY_BYTES = 4096;
 
 const KEY_REJECTED = /ERROR_(WRONG_USER_KEY|KEY_DOES_NOT_EXIST)/;
@@ -47,33 +50,50 @@ function probe(host: string, port: number, apiKey: string): Promise<Probe> {
   return new Promise((resolve) => {
     const startedAt = Date.now();
     const path = `/res.php?key=${encodeURIComponent(apiKey)}&action=get&id=0`;
+
+    // classify() only needs to see the first MAX_BODY_BYTES, so once a caller
+    // settles the probe further events (a late 'error' from destroy(), a
+    // stray 'end') must be ignored rather than resolving a second time.
+    let settled = false;
+    const settle = (result: Probe) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
     const req = http.request(
       { host, port, path, method: 'GET', timeout: PROBE_TIMEOUT_MS },
       (res) => {
         const chunks: Buffer[] = [];
         let size = 0;
-        res.on('data', (chunk: Buffer) => {
-          if (size < MAX_BODY_BYTES) {
-            chunks.push(chunk);
-            size += chunk.length;
-          }
-        });
-        res.on('end', () => {
+        const finishWithBody = () => {
           const body = Buffer.concat(chunks).toString('utf-8');
-          resolve({
+          settle({
             outcome: classify(res.statusCode, body),
             latencyMs: Date.now() - startedAt,
             statusCode: res.statusCode,
           });
+        };
+        res.on('data', (chunk: Buffer) => {
+          if (size >= MAX_BODY_BYTES) return;
+          chunks.push(chunk);
+          size += chunk.length;
+          if (size >= MAX_BODY_BYTES) {
+            // Enough to classify — stop a peer that streams continuously from
+            // keeping the probe pending past PROBE_TIMEOUT_MS.
+            req.destroy();
+            finishWithBody();
+          }
         });
+        res.on('end', finishWithBody);
       },
     );
 
     req.on('timeout', () => {
       req.destroy();
-      resolve({ outcome: 'no-response', error: `no response within ${PROBE_TIMEOUT_MS}ms` });
+      settle({ outcome: 'no-response', error: `no response within ${PROBE_TIMEOUT_MS}ms` });
     });
-    req.on('error', (err: Error) => resolve({ outcome: 'no-response', error: err.message }));
+    req.on('error', (err: Error) => settle({ outcome: 'no-response', error: err.message }));
     req.end();
   });
 }

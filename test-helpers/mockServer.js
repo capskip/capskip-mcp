@@ -15,9 +15,15 @@
 //     and which capskip_status's probe depends on.
 //   - a `rawanswer` pageurl trigger, keeping the raw-answer fallback covered
 //     now that GeeTest solves return parseable JSON by default.
-// Everything the sibling already modelled is load-bearing for existing tests
-// and must stay: empty-body-means-not-ready, the never/slow/empty pageurl
-// triggers, badkey rejection on in.php, and the Turnstile `useragent` field.
+// Of what the sibling already modelled, tests in this repo actually exercise:
+// the `never` pageurl trigger (a poll that never resolves, so a timeout is
+// reached), `badkey` rejection on both in.php and res.php, the CAPCHA_NOT_READY
+// text/JSON not-ready response, the Turnstile `useragent` field, and (added
+// above) the GeeTest JSON payload and `server.lastSubmit`. The `slow` pageurl
+// trigger and the `empty` one (the literal empty-body-means-not-ready
+// response) are NOT referenced by any test here, and never were — they are
+// kept only for parity with the sibling SDK's mock, in case a future test
+// needs them. Removing them costs nothing either way, so they stay.
 
 const http = require('http');
 const { URL } = require('url');
@@ -28,7 +34,14 @@ const USER_AGENT = 'CapSkipUA/1.0';
 // Real CapSkip answers a GeeTest solve with a JSON *string* in `request`, keyed
 // with the geetest_ prefix the target site's own form fields use. The SDK's
 // applyGeetestSolution parses exactly this shape into challenge/validate/seccode.
-const GEETEST_CHALLENGE = '7cf6a8b1a2c34d5e6f7089abcdef0123';
+//
+// GEETEST_CHALLENGE is deliberately NOT the challenge value the tests submit as
+// a tool argument (see geetest.test.js) — it reads as "solved-payload", not as
+// a plausible request challenge. That way, a test asserting
+// structuredContent.challenge === GEETEST_CHALLENGE can only pass if the tool
+// actually parsed this value out of the solved payload; a tool that echoed the
+// request's own `challenge` argument back would fail it.
+const GEETEST_CHALLENGE = 'solved-payload-challenge-fedcba9876543210';
 const GEETEST_VALIDATE = 'd41d8cd98f00b204e9800998ecf8427e';
 const GEETEST_SECCODE = 'd41d8cd98f00b204e9800998ecf8427e|jordan';
 const GEETEST_ANSWER = JSON.stringify({
