@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { baseSolveOutput, timeoutSchema } from '../schemas.js';
 import { runSolve } from '../solve.js';
-import type { SolveExtra } from '../solve.js';
 import type { ToolContext } from '../solver.js';
 
 const inputSchema = z.strictObject({
@@ -28,14 +27,19 @@ export function registerImageTool(server: McpServer, ctx: ToolContext): void {
         + 'supported for image captchas.',
       inputSchema,
       outputSchema: baseSolveOutput,
-      annotations: { readOnlyHint: false, openWorldHint: true },
+      // destructiveHint defaults to *true* whenever readOnlyHint is false, so
+      // omitting it advertised this tool as potentially destructive and cost it
+      // auto-approval in clients that read the hint. Solving a captcha destroys
+      // nothing. idempotentHint is deliberately left at its false default: each
+      // call consumes a fresh, single-use challenge.
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
     async (args, extra) => {
       const timeout = args.timeout ?? ctx.config.defaultTimeout;
 
       return runSolve(
         ctx,
-        extra as unknown as SolveExtra,
+        extra,
         { label: 'Solving image captcha', timeoutSeconds: timeout },
         // No options object: normal() rejects every option except `json`, so
         // passing { timeout } here would throw. runSolve applied the timeout to

@@ -20,8 +20,13 @@ export function createServer(config: CapSkipConfig): McpServer {
         'Solve captchas through a locally-running CapSkip desktop app. Use these '
         + 'tools when browser automation is blocked by a captcha: read the sitekey '
         + 'from the page, call the matching tool, then place the returned token in '
-        + "the page's response field. If a solve fails unexpectedly, call "
-        + 'capskip_status to check CapSkip is running.',
+        + "the page's response field. CapSkip solves image captchas, reCAPTCHA v2 "
+        + 'and v3, Cloudflare Turnstile, and GeeTest v3 — it cannot solve hCaptcha '
+        + 'or FunCaptcha/Arkose, so do not call these tools for those. An hCaptcha '
+        + 'widget renders as <div class="h-captcha" data-sitekey="…">, which is '
+        + 'easy to mistake for reCAPTCHA when scanning the DOM for data-sitekey. '
+        + 'If a solve fails unexpectedly, call capskip_status to check CapSkip is '
+        + 'running.',
     },
   );
 

@@ -146,6 +146,32 @@ If the site loads GeeTest from a non-default domain, pass it through as `api_ser
 
 ---
 
+## hCaptcha or FunCaptcha never solves
+
+**Symptom:** `capskip_solve_recaptcha` is called on a widget that has a `data-sitekey`, and every attempt fails, times out, or returns a token the site rejects.
+
+**Cause:** The captcha is not a reCAPTCHA. CapSkip supports exactly four types — image captchas, reCAPTCHA v2/v3, Cloudflare Turnstile, and GeeTest v3. It **cannot** solve hCaptcha or FunCaptcha/Arkose, and there is no tool for them.
+
+hCaptcha is easy to misidentify because it also carries a `data-sitekey`:
+
+```html
+<div class="h-captcha" data-sitekey="10000000-ffff-ffff-ffff-000000000001"></div>
+```
+
+**Fix:** Check the widget's class or script source before choosing a tool.
+
+| Markup | Type | Tool |
+|---|---|---|
+| `class="g-recaptcha"`, `www.google.com/recaptcha/` | reCAPTCHA v2/v3 | `capskip_solve_recaptcha` |
+| `class="cf-turnstile"`, `challenges.cloudflare.com` | Turnstile | `capskip_solve_turnstile` |
+| `gt=` / `challenge=` from a GeeTest init call | GeeTest v3 | `capskip_solve_geetest` |
+| `class="h-captcha"`, `js.hcaptcha.com` | hCaptcha | **not supported** |
+| `funcaptcha` / `arkoselabs.com` | FunCaptcha/Arkose | **not supported** |
+
+The server tells connected models this in its instructions, but a model can still guess wrong from the DOM alone. Retrying will not help — the type is the problem.
+
+---
+
 ## reCAPTCHA v3 accepted but the site still blocks
 
 **Symptom:** `capskip_solve_recaptcha` returns a token, the site's own verification accepts it, but the site still treats the visit as suspicious (blocks, challenges, or degrades the experience).

@@ -3,13 +3,20 @@ import type { CapSkip, SolveResult } from 'capskip';
 
 import { mapError } from './errors.js';
 import { startProgress } from './progress.js';
+import type { ProgressNotification } from './progress.js';
 import { createClient } from './solver.js';
 import type { ToolContext } from './solver.js';
 
-/** The subset of the MCP request extra that a solve needs. */
+/**
+ * The subset of the MCP request extra that a solve needs.
+ *
+ * `sendNotification` is typed against our own ProgressNotification rather than
+ * `never` so the progress payload is checked at the one place it is built. The
+ * `never` spelling silently accepted anything.
+ */
 export interface SolveExtra {
   _meta?: { progressToken?: string | number };
-  sendNotification: (notification: never) => Promise<void>;
+  sendNotification: (notification: ProgressNotification) => Promise<void>;
 }
 
 export interface SolveOptions {
@@ -59,7 +66,7 @@ export async function runSolve(
   };
 
   const stop = startProgress({
-    sendNotification: extra.sendNotification as never,
+    sendNotification: extra.sendNotification,
     progressToken: extra._meta?.progressToken,
     totalSeconds: opts.timeoutSeconds,
     label: opts.label,

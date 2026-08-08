@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { baseSolveOutput, pageUrlSchema, proxySchema, timeoutSchema } from '../schemas.js';
 import { runSolve } from '../solve.js';
-import type { SolveExtra } from '../solve.js';
 import type { ToolContext } from '../solver.js';
 
 const inputSchema = z.strictObject({
@@ -51,7 +50,12 @@ export function registerRecaptchaTool(server: McpServer, ctx: ToolContext): void
         + 'Google; no solver can raise it.',
       inputSchema,
       outputSchema: baseSolveOutput,
-      annotations: { readOnlyHint: false, openWorldHint: true },
+      // destructiveHint defaults to *true* whenever readOnlyHint is false, so
+      // omitting it advertised this tool as potentially destructive and cost it
+      // auto-approval in clients that read the hint. Solving a captcha destroys
+      // nothing. idempotentHint is deliberately left at its false default: each
+      // call consumes a fresh, single-use challenge.
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
     async (args, extra) => {
       const timeout = args.timeout ?? ctx.config.recaptchaTimeout;
@@ -71,7 +75,7 @@ export function registerRecaptchaTool(server: McpServer, ctx: ToolContext): void
 
       return runSolve(
         ctx,
-        extra as unknown as SolveExtra,
+        extra,
         { label: `Solving reCAPTCHA ${version}`, timeoutSeconds: timeout },
         (client) => client.recaptcha(args.sitekey, args.url, options as never),
         (result, seconds) => {

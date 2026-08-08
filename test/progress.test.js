@@ -5,6 +5,7 @@ const assert = require('node:assert');
 const { setTimeout: delay } = require('node:timers/promises');
 
 const { startProgress } = require('../dist/progress.js');
+const { startHarness } = require('../test-helpers/harness.js');
 
 test('emits notifications while running', async () => {
   const sent = [];
@@ -95,6 +96,51 @@ test('a rejecting sendNotification does not stop the ticker or crash', async () 
   // this line also proves the rejection was handled, since an unhandled
   // rejection aborts the test runner.
   assert.ok(attempts >= 2, `expected repeated attempts, got ${attempts}`);
+});
+
+test('a real tool call emits progress notifications to the client', async () => {
+  // Everything above tests startProgress in isolation. Nothing tested the wiring
+  // between it and a tool call — the progressToken is read from `extra._meta`,
+  // which used to be reached through a double cast that disabled all checking.
+  // If the SDK moved that field, or the tools stopped forwarding `extra`, the
+  // unit tests above would still pass and the server would silently stop
+  // reporting progress, tripping client timeouts on every long solve.
+  //
+  // The mock never resolves a "never" pageurl, so this solve runs to its
+  // timeout. That is the point: assert on the notifications, not the result.
+  const TIMEOUT_SECONDS = 6;
+  const notifications = [];
+
+  const { client, close } = await startHarness();
+  try {
+    const result = await client.callTool(
+      {
+        name: 'capskip_solve_recaptcha',
+        arguments: {
+          sitekey: '6LtestKey',
+          url: 'https://never.example.com/login',
+          timeout: TIMEOUT_SECONDS,
+        },
+      },
+      undefined,
+      { onprogress: (p) => { notifications.push(p); } },
+    );
+
+    // The solve is expected to time out; this only confirms it got that far.
+    assert.strictEqual(result.isError, true);
+
+    assert.ok(
+      notifications.length >= 1,
+      `expected at least one progress notification, got ${notifications.length}`,
+    );
+    for (const n of notifications) {
+      assert.strictEqual(typeof n.progress, 'number', `progress was ${typeof n.progress}`);
+      assert.strictEqual(n.total, TIMEOUT_SECONDS, 'total must be the timeout this call asked for');
+      assert.match(n.message, /reCAPTCHA v2/);
+    }
+  } finally {
+    await close();
+  }
 });
 
 test('stop() is idempotent and silences the ticker', async () => {
