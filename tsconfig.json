@@ -10,7 +10,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "sourceMap": true
+    "sourceMap": true,
+    // `src/` is not published, so a map that only points at ../src/*.ts resolves
+    // to nothing on an installed copy. Embedding the sources makes the shipped
+    // maps actually usable in a stack trace.
+    "inlineSources": true
   },
   "include": ["src/**/*.ts"]
 }

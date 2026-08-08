@@ -2,7 +2,11 @@
   "name": "capskip-mcp",
   "version": "1.0.0",
   "description": "MCP server for the CapSkip local captcha solver",
-  "main": "dist/index.js",
+  "main": "./dist/server.js",
+  "exports": {
+    ".": "./dist/server.js",
+    "./package.json": "./package.json"
+  },
   "bin": { "capskip-mcp": "dist/index.js" },
   "engines": { "node": ">=18" },
   "scripts": {
