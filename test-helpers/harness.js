@@ -34,7 +34,15 @@ async function startHarness(overrides = {}) {
     await new Promise((resolve) => mock.server.close(resolve));
   };
 
-  return { client, close, mock };
+  /**
+   * The field set of the last submit that reached the mock's in.php — i.e. what
+   * the CapSkip API would actually have received. Read it after a tool call to
+   * assert on parameter mapping, not merely on "the call was not rejected".
+   * A function rather than a value because it changes with every call.
+   */
+  const lastSubmit = () => mock.server.lastSubmit;
+
+  return { client, close, mock, lastSubmit };
 }
 
 module.exports = { startHarness };

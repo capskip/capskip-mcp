@@ -36,8 +36,12 @@ test('surfaces the userAgent the token must be submitted with', async () => {
   }
 });
 
-test('accepts challenge-page fields', async () => {
-  const { client, close } = await startHarness();
+test('challenge-page fields reach in.php with cdata mapped to data', async () => {
+  // cdata -> data is the one non-obvious rename in the codebase. Distinct values
+  // are used so a cross-mapped implementation (cdata -> pagedata and
+  // pagedata -> data) fails here: it would pass a mere "was not rejected" check,
+  // since both names are valid Turnstile parameters.
+  const { client, close, lastSubmit } = await startHarness();
   try {
     const result = await client.callTool({
       name: 'capskip_solve_turnstile',
@@ -47,6 +51,15 @@ test('accepts challenge-page fields', async () => {
       },
     });
     assert.notStrictEqual(result.isError, true, result.content?.[0]?.text);
+
+    const sent = lastSubmit();
+    assert.strictEqual(sent.data, 'abc123', 'cdata must arrive as data');
+    assert.strictEqual(sent.pagedata, 'zzz999', 'pagedata must arrive unchanged');
+    assert.strictEqual(sent.action, 'managed');
+    assert.strictEqual(sent.sitekey, '0x4AAAAAAA');
+    assert.strictEqual(sent.method, 'turnstile');
+    // cdata is the MCP-facing spelling only; CapSkip never sees it.
+    assert.strictEqual(sent.cdata, undefined);
   } finally {
     await close();
   }

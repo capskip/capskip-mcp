@@ -27,6 +27,16 @@ test('connection refused explains that CapSkip may not be running', () => {
   assert.match(text, /desktop app is running/);
 });
 
+test('a non-200 from the port says something else is listening, not "not reachable"', () => {
+  // The SDK reports a non-200 as `bad response: <code>`. Saying "not reachable"
+  // here contradicts capskip_status, which reports the same port as occupied by
+  // something that is not CapSkip.
+  const text = textOf(mapError(new NetworkException('bad response: 404'), CTX));
+  assert.match(text, /Something is listening on 127\.0\.0\.1:8080/);
+  assert.match(text, /HTTP 404/);
+  assert.doesNotMatch(text, /not reachable/);
+});
+
 test('a rejected API key points at CAPSKIP_API_KEY', () => {
   const err = new ApiException('ERROR_KEY_DOES_NOT_EXIST');
   const text = textOf(mapError(err, CTX));

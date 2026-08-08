@@ -65,6 +65,29 @@ function unreachable(ctx: ErrorContext): string {
   );
 }
 
+// The SDK reports a non-200 from in.php/res.php as `bad response: <code>`.
+// Something *is* listening on that port, so "not reachable" would send the model
+// looking for a process that is already running. This mirrors the wording
+// capskip_status uses for the same situation.
+const BAD_RESPONSE = /bad response: (\d{3})/;
+
+/**
+ * A connection-level failure, whether the SDK wrapped it or Node raised it raw.
+ * One function so both call sites cannot drift apart.
+ */
+function networkFailure(message: string, ctx: ErrorContext): CallToolResult {
+  const badResponse = BAD_RESPONSE.exec(message);
+  if (badResponse) {
+    return toolError(
+      `Something is listening on ${ctx.host}:${ctx.port} but it did not answer as `
+      + `CapSkip (HTTP ${badResponse[1]}). Check the API port in CapSkip settings, `
+      + 'and that nothing else has taken that port — override with CAPSKIP_HOST / '
+      + 'CAPSKIP_PORT.',
+    );
+  }
+  return toolError(`${unreachable(ctx)} (underlying error: ${message})`);
+}
+
 /** Translate anything thrown during a solve into an actionable tool error. */
 export function mapError(err: unknown, ctx: ErrorContext): CallToolResult {
   const message = messageOf(err);
@@ -93,7 +116,7 @@ export function mapError(err: unknown, ctx: ErrorContext): CallToolResult {
   }
 
   if (err instanceof NetworkException) {
-    return toolError(`${unreachable(ctx)} (underlying error: ${message})`);
+    return networkFailure(message, ctx);
   }
 
   if (err instanceof ValidationException) {
@@ -102,7 +125,7 @@ export function mapError(err: unknown, ctx: ErrorContext): CallToolResult {
 
   // Connection failures can surface as plain Node errors before the SDK wraps them.
   if (/ECONNREFUSED|ECONNRESET|EHOSTUNREACH|ETIMEDOUT|ENOTFOUND/.test(message)) {
-    return toolError(`${unreachable(ctx)} (underlying error: ${message})`);
+    return networkFailure(message, ctx);
   }
 
   return toolError(`Unexpected failure while solving: ${message}`);

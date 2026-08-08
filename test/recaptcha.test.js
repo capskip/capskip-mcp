@@ -114,8 +114,8 @@ test('an unsupported proxy type is rejected', async () => {
   }
 });
 
-test('a supported proxy is accepted', async () => {
-  const { client, close } = await startHarness();
+test('a proxy reaches in.php split into proxy and proxytype', async () => {
+  const { client, close, lastSubmit } = await startHarness();
   try {
     const result = await client.callTool({
       name: 'capskip_solve_recaptcha',
@@ -125,13 +125,23 @@ test('a supported proxy is accepted', async () => {
       },
     });
     assert.notStrictEqual(result.isError, true, result.content?.[0]?.text);
+
+    const sent = lastSubmit();
+    assert.strictEqual(sent.proxy, 'user:pass@1.2.3.4:3128');
+    assert.strictEqual(sent.proxytype, 'SOCKS5');
+    assert.strictEqual(sent.googlekey, '6LtestKey');
+    assert.strictEqual(sent.pageurl, 'https://example.com');
+    assert.strictEqual(sent.method, 'userrecaptcha');
   } finally {
     await close();
   }
 });
 
-test('enterprise and invisible flags are accepted on v2', async () => {
-  const { client, close } = await startHarness();
+test('boolean flags reach in.php as 1, not as "true"', async () => {
+  // CapSkip reads these as API flags. Forwarding the JSON booleans straight
+  // through would send invisible=true, which the API does not recognize —
+  // and every existing test would still pass, because the mock accepts it.
+  const { client, close, lastSubmit } = await startHarness();
   try {
     const result = await client.callTool({
       name: 'capskip_solve_recaptcha',
@@ -141,6 +151,29 @@ test('enterprise and invisible flags are accepted on v2', async () => {
       },
     });
     assert.notStrictEqual(result.isError, true, result.content?.[0]?.text);
+
+    const sent = lastSubmit();
+    assert.strictEqual(sent.invisible, '1');
+    assert.strictEqual(sent.enterprise, '1');
+  } finally {
+    await close();
+  }
+});
+
+test('data_s reaches in.php under the API name data-s', async () => {
+  const { client, close, lastSubmit } = await startHarness();
+  try {
+    const result = await client.callTool({
+      name: 'capskip_solve_recaptcha',
+      arguments: {
+        sitekey: '6LtestKey', url: 'https://example.com', data_s: 'sValue123',
+      },
+    });
+    assert.notStrictEqual(result.isError, true, result.content?.[0]?.text);
+
+    const sent = lastSubmit();
+    assert.strictEqual(sent['data-s'], 'sValue123');
+    assert.strictEqual(sent.data_s, undefined, 'the underscore spelling must not reach CapSkip');
   } finally {
     await close();
   }
