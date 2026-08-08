@@ -6,7 +6,7 @@
   "bin": { "capskip-mcp": "dist/index.js" },
   "engines": { "node": ">=18" },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"try{require('fs').chmodSync('dist/index.js',0o755)}catch(e){}\"",
     "prepublishOnly": "npm run build",
     "test": "npm run build && node --test"
   },
