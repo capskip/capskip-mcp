@@ -3,8 +3,7 @@ dist/
 *.log
 .DS_Store
 
-# .superpowers/plans/ and .superpowers/specs/ are the design record and stay
-# tracked. .superpowers/sdd/ is per-run agent scratch (briefs, reports, diffs,
-# ledger), not part of that record, so it is ignored explicitly here rather
-# than relying only on the nested (and itself untracked) .superpowers/sdd/.gitignore.
-.superpowers/sdd/
+# Local design/planning artifacts. Kept on disk for reference, not published:
+# the four sibling SDK repos ship no equivalent, and the plan is written for
+# build tooling rather than for contributors.
+.superpowers/
