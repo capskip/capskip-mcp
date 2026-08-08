@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "capskip": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "capskip-mcp"],
+      "env": { "CAPSKIP_PORT": "8080" }
+    }
+  }
+}

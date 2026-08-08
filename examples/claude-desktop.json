@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "capskip": {
+      "command": "npx",
+      "args": ["-y", "capskip-mcp"],
+      "env": {
+        "CAPSKIP_HOST": "127.0.0.1",
+        "CAPSKIP_PORT": "8080",
+        "CAPSKIP_API_KEY": "capskip"
+      }
+    }
+  }
+}
