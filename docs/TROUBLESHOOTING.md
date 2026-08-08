@@ -42,10 +42,16 @@ capskip-mcp: CAPSKIP_PORT must be a whole number, got 'abc'.
 
 ## Every tool says "not reachable"
 
-**Symptom:** Every call, including `capskip_status`, returns (or reports) something like:
+**Symptom:** A solve fails with:
 
 ```
 CapSkip is not reachable at 127.0.0.1:8080. Confirm the CapSkip desktop app is running and that its API port matches this setting (override with CAPSKIP_HOST / CAPSKIP_PORT).
+```
+
+and `capskip_status` reports `reachable: false` with:
+
+```
+No response from 127.0.0.1:8080 (connect ECONNREFUSED 127.0.0.1:8080). Start the CapSkip desktop app, then confirm its API port matches — override with CAPSKIP_HOST / CAPSKIP_PORT.
 ```
 
 **Cause:** The CapSkip desktop app is not running, or its API port does not match the `CAPSKIP_PORT` the server was started with.
@@ -61,6 +67,34 @@ CapSkip is not reachable at 127.0.0.1:8080. Confirm the CapSkip desktop app is r
 ```
 
 4. Call `capskip_status` again — it reports `reachable` and a `detail` string without needing CapSkip to solve anything, so it is the fastest way to confirm the fix worked.
+
+---
+
+## "Something is listening … but it did not answer as CapSkip"
+
+**Symptom:** `capskip_status` reports `reachable: false` with:
+
+```
+Something is listening on 127.0.0.1:8080 but it did not answer as CapSkip (HTTP 404). Check the API port in CapSkip settings, and that nothing else has taken that port — override with CAPSKIP_HOST / CAPSKIP_PORT.
+```
+
+**Cause:** A different process holds that port. 8080 is a common default for local dev servers, proxies, and admin UIs, so this is easy to hit. CapSkip may not be running at all, or may be running on a different port.
+
+**Fix**
+
+1. Find what actually holds the port:
+
+```bash
+# macOS / Linux
+lsof -i :8080
+
+# Windows
+netstat -ano | findstr :8080
+```
+
+2. Either stop that process, or point the server at CapSkip's real port with `CAPSKIP_PORT`.
+
+Note that `capskip_status` deliberately reports this as **not** reachable. An earlier version treated any HTTP response as success, which meant it could report a healthy CapSkip seconds before a solve failed against the same port.
 
 ---
 
@@ -83,6 +117,12 @@ CapSkip rejected the API key. Set CAPSKIP_API_KEY to the key shown in CapSkip se
 ```
 
 2. Or, for local development only, disable API key validation in CapSkip Settings — any string (including the default `capskip`) is then accepted.
+
+`capskip_status` diagnoses this without spending a solve. It reports `reachable: true` — CapSkip is running, the key is what is wrong — with:
+
+```
+CapSkip is running at 127.0.0.1:8080, but it rejected the API key. Set CAPSKIP_API_KEY to the key shown in CapSkip settings, or disable key validation there. Solves will fail until this is fixed.
+```
 
 ---
 

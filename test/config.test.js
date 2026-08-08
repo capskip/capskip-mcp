@@ -54,13 +54,27 @@ test('non-numeric port is rejected by name', () => {
   );
 });
 
-test('out-of-range port is rejected', () => {
-  assert.throws(() => resolveConfig(['--port', '70000'], {}), ConfigError);
-  assert.throws(() => resolveConfig(['--port', '0'], {}), ConfigError);
+test('out-of-range port is rejected by name, with the bounds', () => {
+  // Naming the setting is the whole value of these messages: the server exits at
+  // startup and the user only sees this one line in the client's stderr.
+  for (const value of ['70000', '0']) {
+    assert.throws(
+      () => resolveConfig(['--port', value], {}),
+      (err) => err instanceof ConfigError
+        && /--port/.test(err.message)
+        && /between 1 and 65535/.test(err.message),
+      value,
+    );
+  }
 });
 
-test('negative timeout is rejected', () => {
-  assert.throws(() => resolveConfig(['--timeout', '-5'], {}), ConfigError);
+test('negative timeout is rejected by name', () => {
+  assert.throws(
+    () => resolveConfig(['--timeout', '-5'], {}),
+    (err) => err instanceof ConfigError
+      && /--timeout/.test(err.message)
+      && /between 1 and 3600/.test(err.message),
+  );
 });
 
 test('unknown flag is rejected by name', () => {

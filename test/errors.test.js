@@ -65,6 +65,26 @@ test('ERROR_PAGEURL names the offending parameter', () => {
   assert.match(text, /url/);
 });
 
+test('ERROR_INVALID_IMAGE points at the image itself', () => {
+  const text = textOf(mapError(new ApiException('ERROR_INVALID_IMAGE'), CTX));
+  assert.match(text, /could not read that image/i);
+  assert.match(text, /PNG or JPEG/);
+});
+
+test('ERROR_BAD_PARAMETERS points at the supplied values', () => {
+  const text = textOf(mapError(new ApiException('ERROR_BAD_PARAMETERS'), CTX));
+  assert.match(text, /parameters/i);
+  assert.match(text, /Re-check the values/i);
+});
+
+test('an unmapped API error is passed through rather than swallowed', () => {
+  // The fallback matters most for codes added to CapSkip after this release: the
+  // model gets the raw code to reason about instead of a generic failure.
+  const text = textOf(mapError(new ApiException('ERROR_SOMETHING_NEW'), CTX));
+  assert.match(text, /CapSkip returned an error/);
+  assert.match(text, /ERROR_SOMETHING_NEW/);
+});
+
 test('validation errors are surfaced verbatim', () => {
   const text = textOf(mapError(new ValidationException("'action' is only supported for reCAPTCHA v3."), CTX));
   assert.match(text, /only supported for reCAPTCHA v3/);

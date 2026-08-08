@@ -5,6 +5,11 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Nothing yet. Add entries here as changes land; they move into a version
+section at release time.
+
 ## [1.0.0] - 2026-08-09
 
 ### Added
@@ -18,3 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `geetest_validate`, and `geetest_seccode`.
 - Progress notifications during long solves, so MCP clients do not time out.
 - Configuration via `CAPSKIP_*` environment variables or CLI flags.
+
+[Unreleased]: https://github.com/capskip/capskip-mcp/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/capskip/capskip-mcp/releases/tag/v1.0.0

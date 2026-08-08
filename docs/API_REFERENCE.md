@@ -30,13 +30,24 @@ None. The tool rejects any argument it is passed, naming the key.
 
 | Field | Type | Always present | Description |
 |---|---|---|---|
-| `reachable` | boolean | yes | Whether CapSkip answered |
+| `reachable` | boolean | yes | Whether CapSkip itself answered |
 | `host` | string | yes | Host that was probed |
 | `port` | number | yes | Port that was probed |
-| `latencyMs` | number | only when reachable | Round-trip time of the probe |
+| `latencyMs` | number | whenever anything answered | Round-trip time of the probe |
 | `detail` | string | yes | Human-readable summary — also the tool's text output |
 
 `capskip_status` never returns `isError: true` for an unreachable CapSkip; it reports the problem in `reachable` / `detail` instead, so the model can read the result rather than handle an error.
+
+The probe reads the response, not merely the fact that one arrived. Four outcomes are distinguished:
+
+| Situation | `reachable` | `detail` says |
+|---|---|---|
+| CapSkip answered normally | `true` | `CapSkip answered at <host>:<port> in <n>ms.` |
+| CapSkip answered but rejected the API key | `true` | `CapSkip is running at <host>:<port>, but it rejected the API key. …` |
+| Something else holds the port | `false` | `Something is listening on <host>:<port> but it did not answer as CapSkip (HTTP <code>). …` |
+| Nothing answered | `false` | `No response from <host>:<port> (<error>). …` |
+
+A rejected key counts as reachable on purpose: CapSkip *is* running, and the fix is the key, not the process.
 
 ### Example
 
@@ -54,7 +65,7 @@ Response (`structuredContent`):
 }
 ```
 
-When unreachable:
+When nothing is listening:
 
 ```json
 {
@@ -62,6 +73,18 @@ When unreachable:
   "host": "127.0.0.1",
   "port": 8080,
   "detail": "No response from 127.0.0.1:8080 (connect ECONNREFUSED 127.0.0.1:8080). Start the CapSkip desktop app, then confirm its API port matches — override with CAPSKIP_HOST / CAPSKIP_PORT."
+}
+```
+
+When something else holds the port:
+
+```json
+{
+  "reachable": false,
+  "host": "127.0.0.1",
+  "port": 8080,
+  "latencyMs": 3,
+  "detail": "Something is listening on 127.0.0.1:8080 but it did not answer as CapSkip (HTTP 404). Check the API port in CapSkip settings, and that nothing else has taken that port — override with CAPSKIP_HOST / CAPSKIP_PORT."
 }
 ```
 
@@ -126,7 +149,7 @@ Solve a Google reCAPTCHA v2 or v3 widget, including invisible and Enterprise var
 | `invisible` | boolean | No | `false` | "v2 only. True when the widget renders with size=invisible." |
 | `enterprise` | boolean | No | `false` | "True for reCAPTCHA Enterprise. Works with both v2 and v3." |
 | `action` | string | No | — | "v3 only. The action passed to grecaptcha.execute(), e.g. 'login'." |
-| `data_s` | string | No | — | "The data-s value, used by Google's own services. Rarely needed." |
+| `data_s` | string | No | — | "v2 only. The data-s value, used by Google's own services. Rarely needed — CapSkip rejects it on a v3 submit." |
 | `proxy` | object | No | — | "Solve through this proxy so the token is issued against its IP." |
 | `timeout` | integer | No | `CAPSKIP_RECAPTCHA_TIMEOUT` (300) | "Seconds to wait before giving up. Maximum 600." |
 

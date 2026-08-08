@@ -70,6 +70,8 @@ The agent reads the sitekey off the page, calls `capskip_solve_recaptcha`, and p
 | `capskip_solve_turnstile` | Solve a Cloudflare Turnstile widget or interstitial challenge page | `sitekey`, `url` |
 | `capskip_solve_geetest` | Solve a GeeTest v3 slide-puzzle captcha | `gt`, `challenge`, `url` |
 
+These four types are all CapSkip supports. **hCaptcha and FunCaptcha/Arkose cannot be solved** — there is no tool for them, and `capskip_solve_recaptcha` will not work on one. hCaptcha is the easiest to misidentify, since it also carries a `data-sitekey`; check for `class="h-captcha"` or a `js.hcaptcha.com` script before choosing a tool.
+
 > **There is no `min_score` parameter on `capskip_solve_recaptcha`.** reCAPTCHA v3 scores are assigned by Google from signals CapSkip has no access to — no solver, local or cloud, can raise a score after the fact. A `min_score` option would promise control that does not exist, so it is deliberately left out. Passing it anyway is rejected as an unrecognized key, not silently ignored.
 
 Full parameter tables and worked examples: [API Reference](docs/API_REFERENCE.md).
@@ -129,6 +131,7 @@ Every tool call returns `isError: true` with readable text on failure — never 
 | Cause | Message |
 |---|---|
 | CapSkip unreachable | `CapSkip is not reachable at <host>:<port>. Confirm the CapSkip desktop app is running and that its API port matches this setting (override with CAPSKIP_HOST / CAPSKIP_PORT).` |
+| Another process holds the port | `Something is listening on <host>:<port> but it did not answer as CapSkip (HTTP <code>). Check the API port in CapSkip settings, and that nothing else has taken that port — override with CAPSKIP_HOST / CAPSKIP_PORT.` |
 | Wrong API key (`ERROR_KEY_DOES_NOT_EXIST` / `ERROR_WRONG_USER_KEY`) | `CapSkip rejected the API key. Set CAPSKIP_API_KEY to the key shown in CapSkip settings, or disable key validation there.` |
 | `ERROR_CAPTCHA_UNSOLVABLE` | `CapSkip could not solve this captcha. Fetch a fresh sitekey or challenge from the page and try again.` |
 | `ERROR_GOOGLEKEY` | `CapSkip rejected the sitekey. Re-read data-sitekey from the page and retry.` |

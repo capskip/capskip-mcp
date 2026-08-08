@@ -30,7 +30,10 @@ const inputSchema = z.strictObject({
   data_s: z
     .string()
     .optional()
-    .describe("The data-s value, used by Google's own services. Rarely needed."),
+    .describe(
+      "v2 only. The data-s value, used by Google's own services. Rarely needed — "
+      + 'CapSkip rejects it on a v3 submit.',
+    ),
   proxy: proxySchema
     .optional()
     .describe('Solve through this proxy so the token is issued against its IP.'),
