@@ -1,0 +1,135 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in the CapSkip MCP server
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much detail as possible.
+
+        The single most useful thing you can attach is the server's **stderr
+        output**. `capskip-mcp` writes all logs and diagnostics to stderr —
+        stdout is reserved for MCP protocol (JSON-RPC) traffic, so stderr is
+        where the real story is. Most MCP clients write server stderr to a
+        log file; check your client's MCP server logs.
+
+  - type: dropdown
+    id: mcp-client
+    attributes:
+      label: MCP client
+      options:
+        - Claude Desktop
+        - Claude Code
+        - Cursor
+        - VS Code
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: mcp-client-version
+    attributes:
+      label: MCP client version
+      description: >
+        Version of the client selected above (Claude Desktop: Help → About;
+        Claude Code: `claude --version`; Cursor: Cursor menu → About;
+        VS Code: Help → About).
+      placeholder: "1.2.3"
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: Output of `node --version`
+      placeholder: "20.11.0"
+    validations:
+      required: true
+
+  - type: input
+    id: capskip-version
+    attributes:
+      label: CapSkip desktop app version
+      description: Shown in the CapSkip desktop app's Settings / About screen
+      placeholder: "2.4.1"
+    validations:
+      required: true
+
+  - type: input
+    id: capskip-mcp-version
+    attributes:
+      label: capskip-mcp version
+      description: Output of `npx capskip-mcp --version`, if known
+      placeholder: "1.0.0"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Tool
+      options:
+        - capskip_status
+        - capskip_solve_image_captcha
+        - capskip_solve_recaptcha
+        - capskip_solve_turnstile
+        - capskip_solve_geetest
+        - Other / not tool-specific
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Your client config and the tool call that triggered it. Redact sitekeys, tokens, and API keys.
+      placeholder: |
+        1. capskip-mcp configured with CAPSKIP_HOST=127.0.0.1, CAPSKIP_PORT=8080
+        2. Agent calls capskip_solve_recaptcha with sitekey=..., url=...
+        3. See error: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: stderr
+    attributes:
+      label: Server stderr output
+      description: >
+        The single most useful diagnostic. capskip-mcp sends all logs and
+        errors to stderr — stdout carries only MCP protocol traffic, so it
+        will not show you anything useful here. Paste the relevant lines
+        from your client's MCP server log.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Error shown in the client
+      description: The error text or tool result shown in the chat UI, if different from the stderr above.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: The CapSkip desktop app was running when the error occurred
+          required: true
+        - label: "I ran `capskip_status` and it reported `reachable: true`"
+          required: false
+        - label: I searched existing issues and did not find a duplicate
+          required: true

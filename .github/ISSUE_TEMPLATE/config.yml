@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: CapSkip API Documentation
+    url: https://capskip.com/api-docs/
+    about: Official CapSkip HTTP API reference
+  - name: Model Context Protocol Documentation
+    url: https://modelcontextprotocol.io
+    about: MCP specification and client/server docs
+  - name: CapSkip Support
+    url: https://capskip.com/contact/
+    about: Contact CapSkip for app or licensing questions

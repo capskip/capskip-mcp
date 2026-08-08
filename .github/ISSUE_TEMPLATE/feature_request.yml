@@ -1,0 +1,49 @@
+name: Feature Request
+description: Suggest an improvement to the CapSkip MCP server
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        `capskip-mcp` exposes five tools backed by CapSkip: `capskip_status`,
+        `capskip_solve_image_captcha`, `capskip_solve_recaptcha`,
+        `capskip_solve_turnstile`, and `capskip_solve_geetest`.
+        Confirm new captcha types are supported by the
+        [CapSkip API](https://capskip.com/api-docs/) before requesting a new tool —
+        this server is a thin translation layer and cannot solve anything
+        CapSkip itself does not support.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem does this solve? What are you trying to accomplish?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like the server to behave? Note any new tool, parameter, or config variable you have in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds you've tried?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: This feature is supported by the CapSkip API (or is an MCP-server-only improvement)
+          required: true
+        - label: I searched existing issues and did not find a duplicate
+          required: true
