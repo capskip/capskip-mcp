@@ -44,13 +44,18 @@ test('accepts a custom api_server', async () => {
 test('requires gt, challenge, and url', async () => {
   const { client, close } = await startHarness();
   try {
-    for (const args of [
-      { challenge: 'c', url: 'https://example.com' },
-      { gt: 'g', url: 'https://example.com' },
-      { gt: 'g', challenge: 'c' },
-    ]) {
+    const cases = [
+      { missing: 'gt', args: { challenge: 'c', url: 'https://example.com' } },
+      { missing: 'challenge', args: { gt: 'g', url: 'https://example.com' } },
+      { missing: 'url', args: { gt: 'g', challenge: 'c' } },
+    ];
+
+    for (const { missing, args } of cases) {
       const result = await client.callTool({ name: 'capskip_solve_geetest', arguments: args });
       assert.strictEqual(result.isError, true, JSON.stringify(args));
+      // Asserting the field name matters: without it the test would pass even
+      // if all three combinations were rejected for the same wrong reason.
+      assert.match(result.content[0].text, new RegExp(`at ${missing}`), JSON.stringify(args));
     }
   } finally {
     await close();
