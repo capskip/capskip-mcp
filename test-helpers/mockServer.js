@@ -50,6 +50,25 @@ const GEETEST_ANSWER = JSON.stringify({
   geetest_seccode: GEETEST_SECCODE,
 });
 
+// Real CapSkip answers an ALTCHA solve with a base64 payload in `request`: the
+// challenge document with the winning counter added. The SDK's
+// applyAltchaSolution decodes exactly this shape into token/number, so the mock
+// returns a real one — a made-up string would leave the decode path untested.
+//
+// ALTCHA_NUMBER is deliberately not a value any test passes in as an argument,
+// so a test asserting structuredContent.number === ALTCHA_NUMBER can only pass
+// if the tool decoded it out of the payload.
+const ALTCHA_NUMBER = 9661;
+const ALTCHA_TOKEN = 'eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiM2RkMjgyNTNiZTZjYzBjNTRkOTVmN2Y5OGM1MTdlNjgiLCJudW1iZXIiOjk2NjEsInNhbHQiOiI0NmQ1YjFjODg3MWU1MTUyZDkwMmVlM2Y/ZXhwaXJlcz0xODkzNDU2MDAwIiwic2lnbmF0dXJlIjoiNGIxY2YwZTBiZTBmNGU1MjQ3ZTUwYjBmOWE0NDk4MzAiLCJ0b29rIjoxNi41OH0=';
+
+// The other ALTCHA generation. A proof-of-work v2 answer has no top-level
+// `number` at all -- the counter lives at `solution.counter` inside the token,
+// and the server reports it as `solution.number` alongside. Captured from a real
+// PBKDF2/SHA-256 deployment, the scheme altcha.org documents today. Reached via
+// the `altchav2` pageurl trigger.
+const ALTCHA_V2_NUMBER = 47;
+const ALTCHA_V2_TOKEN = 'eyJjaGFsbGVuZ2UiOnsicGFyYW1ldGVycyI6eyJhbGdvcml0aG0iOiJQQktERjIvU0hBLTI1NiIsImNvc3QiOjUwMDAwLCJleHBpcmVzQXQiOjE3ODkyMjQwOTAsImtleUxlbmd0aCI6MzIsImtleVByZWZpeCI6IjAwIiwibm9uY2UiOiI2MzRjNGY1OTFmZDA4NmJlYjQwZDY3MzEyYjg1ODA4YSIsInNhbHQiOiI1MTFlMWM3NWVkYmYyOTUyNzhjOWJmYjY4MTkxMDUzYyJ9LCJzaWduYXR1cmUiOiI5MTk3ZTRhMzVlYmZmMzk5ZDY2OWU3NDdjN2M1ZTZhYjA3OWIzMGZlMzQzN2RmMjY4ZGM3Y2FmMzRjZjllMjgxIn0sInNvbHV0aW9uIjp7ImNvdW50ZXIiOjQ3LCJkZXJpdmVkS2V5IjoiMDA5OWRiN2NiMzY4NjRkODg3NWZmODMwNWM5YTNkMjY0OWIxZjcyY2I3NzRkZTFjIn19';
+
 // A minimal valid 1x1 PNG. The mock returns these bytes for /image.png and the
 // SDK never inspects the content, so exact pixels do not matter.
 const PNG = Buffer.from(
@@ -98,6 +117,28 @@ function createMockServer() {
         wantJson ? '{"status":0,"request":"CAPCHA_NOT_READY"}' : 'CAPCHA_NOT_READY',
         wantJson ? 'application/json' : 'text/plain',
       );
+    } else if (idType[cid] === 'altcha' && cid.startsWith('altchav2')) {
+      if (wantJson) {
+        send(res, JSON.stringify({
+          status: 1,
+          request: ALTCHA_V2_TOKEN,
+          solution: { token: ALTCHA_V2_TOKEN, number: ALTCHA_V2_NUMBER },
+        }), 'application/json');
+      } else {
+        send(res, `OK|${ALTCHA_V2_TOKEN}`);
+      }
+    } else if (idType[cid] === 'altcha') {
+      // CapSkip emits a superset: the legacy status/request pair plus the
+      // createTask-shaped solution object.
+      if (wantJson) {
+        send(res, JSON.stringify({
+          status: 1,
+          request: ALTCHA_TOKEN,
+          solution: { token: ALTCHA_TOKEN, number: ALTCHA_NUMBER },
+        }), 'application/json');
+      } else {
+        send(res, `OK|${ALTCHA_TOKEN}`);
+      }
     } else if (wantJson && idType[cid] === 'turnstile') {
       send(res, `{"status":1,"request":"${CODE}","useragent":"${USER_AGENT}"}`, 'application/json');
     } else if (wantJson && idType[cid] === 'geetest' && !cid.startsWith('raw')) {
@@ -138,6 +179,8 @@ function createMockServer() {
       cid = `slow${ids}`;
     } else if (pageurl.includes('empty')) {
       cid = `empty${ids}`;
+    } else if (pageurl.includes('altchav2')) {
+      cid = `altchav2${ids}`;
     } else if (pageurl.includes('rawanswer')) {
       cid = `raw${ids}`;
     } else {
@@ -200,6 +243,10 @@ module.exports = {
   GEETEST_VALIDATE,
   GEETEST_SECCODE,
   GEETEST_ANSWER,
+  ALTCHA_TOKEN,
+  ALTCHA_NUMBER,
+  ALTCHA_V2_TOKEN,
+  ALTCHA_V2_NUMBER,
   PNG,
   createMockServer,
   startMockServer,

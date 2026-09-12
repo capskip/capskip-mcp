@@ -19,7 +19,8 @@ For each captcha type, four questions in order:
 6. [Turnstile widget](#6-turnstile-widget)
 7. [Turnstile challenge page](#7-turnstile-challenge-page)
 8. [GeeTest v3](#8-geetest-v3)
-9. [Using a proxy](#9-using-a-proxy)
+9. [ALTCHA](#9-altcha)
+10. [Using a proxy](#10-using-a-proxy)
 
 ---
 
@@ -242,9 +243,47 @@ A three-field post-back: `challenge`, `validate`, and `seccode` from the respons
 
 ---
 
-## 9. Using a proxy
+## 9. ALTCHA
 
-Solving through the same IP you will submit from generally improves acceptance for reCAPTCHA, Turnstile, and GeeTest. All three tools accept an optional `proxy` object:
+### How do I recognize this captcha on a page?
+
+An `<altcha-widget>` element, or a checkbox-style control whose container mentions "altcha". Unlike the others there is no sitekey: the widget names a challenge source instead. Read the page source rather than assuming which attribute — v1/v2 widgets use `challengeurl="…"` (with `challengejson="…"` for an inline challenge), while v3+ uses a single `challenge="…"` that takes either a URL or the challenge data.
+
+Some deployments generate the challenge in-page and fetch nothing at all. In that case there is no network request to watch — read the challenge out of the widget.
+
+### What do I pass to the tool?
+
+`url`, plus **one** of:
+
+- `challenge_url` — the endpoint the widget fetches from; CapSkip fetches it for you
+- `challenge_json` — the challenge document itself, as a JSON string; solved locally with no network request
+
+```json
+{
+  "url": "https://example.com/signup",
+  "challenge_url": "https://example.com/captcha/api/altcha/challenge"
+}
+```
+
+Find the endpoint in DevTools → Network: it is the request the widget makes for its challenge, often something like `/altcha/challenge`. Its JSON response is what `challenge_json` would carry.
+
+> **Challenges expire, and the window is short** — some sites inside two minutes. Fetch one immediately before solving and submit the token promptly. An expired challenge is rejected with a bare "verification failed" that looks exactly like a wrong answer, which sends people hunting for a solver bug that is not there.
+
+### Where does the answer go?
+
+A single field. Submit `token` under the name `altcha`, exactly as the widget would:
+
+```
+email=someone%40example.com&altcha=eyJhbGdvcml0aG0iOiJTSEEtMjU2Iiwi...
+```
+
+Do not re-encode, trim or re-order it: the token is base64 of a JSON document whose fields are covered by the server's HMAC signature, so any modification invalidates it. Some integrations read the payload from a JSON body field instead — check what the page's own submit sends and mirror it.
+
+---
+
+## 10. Using a proxy
+
+Solving through the same IP you will submit from generally improves acceptance for reCAPTCHA, Turnstile, and GeeTest. All three tools accept an optional `proxy` object, as does `capskip_solve_altcha` — though there it applies only to the challenge fetch, never to the solve itself:
 
 ```json
 {
