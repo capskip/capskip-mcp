@@ -23,6 +23,9 @@ section at release time.
 - Calling it with neither challenge parameter returns an error naming what is
   missing, and where to find it, rather than spending a round trip to learn
   CapSkip's `ERROR_BAD_PARAMETERS`.
+- `number` is reported for both ALTCHA generations — the legacy scheme and
+  proof-of-work v2 (PBKDF2/SHA), whose token carries no top-level `number` at
+  all. Verified against live v1 and v2 deployments.
 
 ### Changed
 

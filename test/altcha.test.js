@@ -4,7 +4,9 @@ const test = require('node:test');
 const assert = require('node:assert');
 
 const { startHarness } = require('../test-helpers/harness.js');
-const { ALTCHA_TOKEN, ALTCHA_NUMBER } = require('../test-helpers/mockServer.js');
+const {
+  ALTCHA_TOKEN, ALTCHA_NUMBER, ALTCHA_V2_TOKEN, ALTCHA_V2_NUMBER,
+} = require('../test-helpers/mockServer.js');
 
 const URL = 'https://example.com/signup';
 const CHALLENGE_URL = 'https://example.com/captcha/api/altcha/challenge';
@@ -46,6 +48,25 @@ test('exposes the token and the counter that solved it', async () => {
     assert.strictEqual(result.structuredContent.token, ALTCHA_TOKEN);
     assert.strictEqual(result.structuredContent.number, ALTCHA_NUMBER);
     assert.match(result.content[0].text, /altcha/);
+  } finally {
+    await close();
+  }
+});
+
+test('reports the counter for a proof-of-work v2 answer', async () => {
+  // The two ALTCHA generations shape their tokens differently: a v2 payload has
+  // no top-level `number` at all, the counter sitting at `solution.counter`.
+  // The tool must report it either way, or `number` silently vanishes on every
+  // PBKDF2 site — the scheme altcha.org recommends.
+  const { client, close } = await startHarness();
+  try {
+    const result = await client.callTool({
+      name: 'capskip_solve_altcha',
+      arguments: { url: 'https://example.com/altchav2', challenge_url: CHALLENGE_URL },
+    });
+    assert.notStrictEqual(result.isError, true, result.content?.[0]?.text);
+    assert.strictEqual(result.structuredContent.token, ALTCHA_V2_TOKEN);
+    assert.strictEqual(result.structuredContent.number, ALTCHA_V2_NUMBER);
   } finally {
     await close();
   }

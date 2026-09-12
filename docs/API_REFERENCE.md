@@ -352,7 +352,7 @@ Open DevTools → Network on the target page and look for the request the `<altc
 | `code` | string | yes | The base64 token — the same string as `token` |
 | `solveSeconds` | number | yes | Wall-clock time the solve took |
 | `token` | string | yes | The payload to submit in the `altcha` form field |
-| `number` | number | when the payload decodes | The counter that satisfied the challenge |
+| `number` | number | when the server reports one | The counter that satisfied the challenge. Present for both the legacy and proof-of-work v2 schemes, whose tokens carry it differently. |
 
 ### Example
 
