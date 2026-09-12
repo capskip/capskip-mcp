@@ -15,6 +15,7 @@ Every solve tool declares an `outputSchema` and returns MCP `structuredContent` 
 | `capskip_solve_recaptcha` | Solve a Google reCAPTCHA v2 or v3 widget | Yes |
 | `capskip_solve_turnstile` | Solve a Cloudflare Turnstile widget or challenge page | Yes |
 | `capskip_solve_geetest` | Solve a GeeTest v3 slide-puzzle captcha | Yes |
+| `capskip_solve_altcha` | Solve an ALTCHA proof-of-work challenge | Yes (challenge fetch only) |
 
 ---
 
@@ -153,7 +154,7 @@ Solve a Google reCAPTCHA v2 or v3 widget, including invisible and Enterprise var
 | `proxy` | object | No | — | "Solve through this proxy so the token is issued against its IP." |
 | `timeout` | integer | No | `CAPSKIP_RECAPTCHA_TIMEOUT` (300) | "Seconds to wait before giving up. Maximum 600." |
 
-`proxy` shape (shared with `capskip_solve_turnstile` and `capskip_solve_geetest`):
+`proxy` shape (shared with `capskip_solve_turnstile`, `capskip_solve_geetest` and `capskip_solve_altcha`):
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -318,6 +319,69 @@ Response (`structuredContent`):
 ```
 
 Text output: `Solved GeeTest in 14.2s.\nPost these back exactly as the site's own front-end would:\ngeetest_challenge: 7cf6a8b1a2c34d5e6f7089abcdef0123\ngeetest_validate: a1b2c3d4e5f6...\ngeetest_seccode: a1b2c3d4e5f6...|jordan\n(CapSkip captcha id 10432)`
+
+---
+
+## `capskip_solve_altcha`
+
+Solve an ALTCHA proof-of-work challenge. ALTCHA is not a recognition captcha — there is nothing to read; the client brute-forces a number that satisfies a challenge, so a solve is deterministic and takes milliseconds. Give it either `challenge_url` (the endpoint the `<altcha-widget>` fetches from, which CapSkip will fetch) or `challenge_json` (the challenge document itself). Returns a token to put in the page's form field named `altcha`, verbatim. IMPORTANT: challenges expire quickly — some sites inside two minutes — so read the challenge immediately before calling and submit the token promptly. An expired challenge is rejected with a bare "verification failed" that looks exactly like a wrong answer.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `url` | string (URL) | Yes | — | "Full URL of the page the captcha appears on, including scheme." |
+| `challenge_url` | string | One of the two | — | "The endpoint the ALTCHA widget fetches its challenge from. CapSkip fetches it for you." |
+| `challenge_json` | string | One of the two | — | "The challenge document itself, as a JSON string, when you already have it. Solved locally with no network request." |
+| `proxy` | object | No | — | "Fetch the challenge through this proxy. Used ONLY for the challenge_url fetch." |
+| `timeout` | integer | No | `CAPSKIP_DEFAULT_TIMEOUT` (120) | "Seconds to wait before giving up. Maximum 600." |
+
+Passing neither `challenge_url` nor `challenge_json` returns an error naming what is missing, rather than spending a round trip to learn CapSkip's `ERROR_BAD_PARAMETERS`. Passing both is allowed — the inline document wins.
+
+`proxy` has the same `{ type, uri }` shape documented under `capskip_solve_recaptcha` above.
+
+### Finding the challenge
+
+Open DevTools → Network on the target page and look for the request the `<altcha-widget>` makes for its challenge (often something like `/altcha/challenge`). The request URL is `challenge_url`; its JSON response is `challenge_json`. The widget attribute naming that endpoint depends on the widget version: v1/v2 use `challengeurl="…"`, while v3+ uses `challenge="…"` for both a URL and inline data.
+
+### Output shape
+
+| Field | Type | Always present | Description |
+|---|---|---|---|
+| `captchaId` | string | yes | CapSkip's internal id for this solve |
+| `code` | string | yes | The base64 token — the same string as `token` |
+| `solveSeconds` | number | yes | Wall-clock time the solve took |
+| `token` | string | yes | The payload to submit in the `altcha` form field |
+| `number` | number | when the payload decodes | The counter that satisfied the challenge |
+
+### Example
+
+Request:
+
+```json
+{
+  "url": "https://example.com/signup",
+  "challenge_url": "https://example.com/captcha/api/altcha/challenge"
+}
+```
+
+Response (`structuredContent`):
+
+```json
+{
+  "captchaId": "10433",
+  "code": "eyJhbGdvcml0aG0iOiJTSEEtMjU2Iiwi...",
+  "solveSeconds": 0.27,
+  "token": "eyJhbGdvcml0aG0iOiJTSEEtMjU2Iiwi...",
+  "number": 9661
+}
+```
+
+Text output: `Solved ALTCHA in 0.27s.\nSubmit this verbatim in the form field the widget uses, named \`altcha\` — do not re-encode, trim or re-order it, or the server's signature check fails:\naltcha: eyJhbGdvcml0aG0iOiJTSEEtMjU2Iiwi...\n(counter 9661; CapSkip captcha id 10433)`
+
+### Unsupported algorithms
+
+CapSkip solves the legacy scheme (SHA-1/256/384/512) and PoW v2 with PBKDF2 or SHA. **Argon2id and scrypt are refused**, not attempted: the solve returns `ERROR_CAPTCHA_UNSOLVABLE` and is never retried. ALTCHA recommends PBKDF2 as the default, so this affects a minority of sites.
 
 ---
 

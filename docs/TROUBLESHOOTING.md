@@ -156,6 +156,28 @@ The timeout error also names the CapSkip captcha id when one was assigned, so a 
 
 ---
 
+## ALTCHA is rejected even though the solve succeeded
+
+**Symptom:** `capskip_solve_altcha` returns a token, but the site answers "verification failed".
+
+**Cause:** The challenge expired before the token was submitted. A v1 challenge carries its expiry inside `salt` (`…?expires=1788669437`); a v2 challenge declares it as `parameters.expiresAt`. The windows are tighter than people expect — some sites issue challenges valid for about two minutes. An expired challenge produces a technically correct token that the site refuses with no explanation, which looks exactly like a wrong answer.
+
+**Fix:** Read the challenge immediately before calling the tool, and submit the token straight away. Do not fetch a batch of challenges in advance, and do not hold a token while a user fills in a form.
+
+Passing `challenge_url` rather than `challenge_json` helps: if the challenge expires while the job is queued, CapSkip fetches a fresh one automatically, the way the widget's own `refetchonexpire` does.
+
+---
+
+## ALTCHA returns ERROR_CAPTCHA_UNSOLVABLE immediately
+
+**Symptom:** The solve fails in well under a second, with no retry.
+
+**Cause:** Either the challenge uses an algorithm CapSkip does not implement — **Argon2id** or **scrypt**, both memory-hard KDFs with no implementation in the .NET runtime CapSkip ships — or the inline `challenge_json` had already expired or was malformed. None of those can succeed on a second attempt, so they are refused rather than retried.
+
+**Fix:** Check the challenge document's `algorithm` field. CapSkip solves the legacy scheme (SHA-1/256/384/512) and PoW v2 with PBKDF2 or SHA; ALTCHA itself recommends PBKDF2 as the default, so an Argon2id site is unusual and worth reporting. If the algorithm is supported, fetch a fresh challenge — the one you sent had expired.
+
+---
+
 ## GeeTest always fails
 
 **Symptom:** `capskip_solve_geetest` fails or times out even though `gt` and `challenge` look correct.
@@ -190,7 +212,7 @@ If the site loads GeeTest from a non-default domain, pass it through as `api_ser
 
 **Symptom:** `capskip_solve_recaptcha` is called on a widget that has a `data-sitekey`, and every attempt fails, times out, or returns a token the site rejects.
 
-**Cause:** The captcha is not a reCAPTCHA. CapSkip supports exactly four types — image captchas, reCAPTCHA v2/v3, Cloudflare Turnstile, and GeeTest v3. It **cannot** solve hCaptcha or FunCaptcha/Arkose, and there is no tool for them.
+**Cause:** The captcha is not a reCAPTCHA. CapSkip supports exactly five types — image captchas, reCAPTCHA v2/v3, Cloudflare Turnstile, GeeTest v3, and ALTCHA. It **cannot** solve hCaptcha or FunCaptcha/Arkose, and there is no tool for them.
 
 hCaptcha is easy to misidentify because it also carries a `data-sitekey`:
 

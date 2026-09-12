@@ -1,6 +1,6 @@
 {
   "name": "capskip-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Captcha solver MCP server for AI agents: solve reCAPTCHA v2/v3, Cloudflare Turnstile, GeeTest and image captchas via CapSkip, a local unlimited captcha solver with no per-solve fees.",
   "main": "./dist/server.js",
   "exports": {
@@ -33,7 +33,7 @@
   "files": ["dist", "docs", "examples", "CHANGELOG.md", "SECURITY.md"],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "capskip": "^1.1.0",
+    "capskip": "^1.2.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

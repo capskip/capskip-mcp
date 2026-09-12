@@ -5,7 +5,7 @@
 [![Tests](https://github.com/capskip/capskip-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/capskip/capskip-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/capskip-mcp.svg)](https://www.npmjs.com/package/capskip-mcp)
 
-**A captcha solver [MCP](https://modelcontextprotocol.io) server that lets AI agents solve reCAPTCHA, Cloudflare Turnstile, GeeTest and image captchas instead of stalling on them.**
+**A captcha solver [MCP](https://modelcontextprotocol.io) server that lets AI agents solve reCAPTCHA, Cloudflare Turnstile, GeeTest, ALTCHA and image captchas instead of stalling on them.**
 
 Works with Claude Desktop, Claude Code, Cursor, VS Code, and any Model Context Protocol client. Powered by [CapSkip](https://capskip.com) — a **local captcha solver** that runs on your own machine, licensed once rather than billed per solve.
 
@@ -31,6 +31,7 @@ CapSkip runs as a desktop app exposing a captcha-solving HTTP API on `127.0.0.1:
 | **reCAPTCHA v3 solver** | `capskip_solve_recaptcha` | Pass `version: "v3"` and the page's `action` |
 | **Cloudflare Turnstile solver** | `capskip_solve_turnstile` | Widget and interstitial challenge pages |
 | **GeeTest v3 solver** | `capskip_solve_geetest` | Slide puzzle; returns challenge/validate/seccode |
+| **ALTCHA solver** | `capskip_solve_altcha` | Proof-of-work; returns the token for the `altcha` field |
 | **Image captcha solver** (text/OCR) | `capskip_solve_image_captcha` | File path, URL, data URI, or base64 |
 
 **Not supported: hCaptcha and FunCaptcha/Arkose.** There is no tool for them and `capskip_solve_recaptcha` will not work on one. hCaptcha is the easiest to misidentify since it also carries a `data-sitekey` — check for `class="h-captcha"` or a `js.hcaptcha.com` script first.
@@ -112,6 +113,7 @@ CapSkip exposes the familiar `in.php` / `res.php` endpoints, so it works as a **
 | `capskip_solve_recaptcha` | Solve reCAPTCHA v2 or v3, including invisible and Enterprise | `sitekey`, `url` |
 | `capskip_solve_turnstile` | Solve a Cloudflare Turnstile widget or challenge page | `sitekey`, `url` |
 | `capskip_solve_geetest` | Solve a GeeTest v3 slide-puzzle captcha | `gt`, `challenge`, `url` |
+| `capskip_solve_altcha` | Solve an ALTCHA proof-of-work challenge | `url`, and one of `challenge_url` / `challenge_json` |
 
 > **There is no `min_score` parameter on `capskip_solve_recaptcha`.** reCAPTCHA v3 scores are assigned by Google from signals no solver has access to — local or cloud, none can raise a score after the fact. A `min_score` option would promise control that does not exist, so it is deliberately left out. Passing it anyway is rejected as an unrecognized key, not silently ignored.
 
@@ -152,6 +154,10 @@ For non-agent scripts, use the language SDKs directly — see the [Playwright](h
 | `CAPSKIP_PORT` | `8080` | API port from CapSkip settings |
 | `CAPSKIP_TIMEOUT` | `120` | Default `timeout` for `capskip_solve_image_captcha`, seconds |
 | `CAPSKIP_RECAPTCHA_TIMEOUT` | `300` | Default `timeout` for the reCAPTCHA / Turnstile / GeeTest tools, seconds |
+
+ALTCHA uses `CAPSKIP_DEFAULT_TIMEOUT`, not the reCAPTCHA one — it is CPU
+proof-of-work measured in milliseconds, not a browser solve.
+
 | `CAPSKIP_POLLING_INTERVAL` | `5` | Max seconds between polls |
 
 CLI flags override environment variables, which override the defaults:
@@ -179,6 +185,7 @@ Every solve tool returns a human-readable text block and `structuredContent` mat
 
 - **`capskip_solve_turnstile`** adds `userAgent`. Submit the token with this exact User-Agent — Cloudflare rejects a token replayed under a different one.
 - **`capskip_solve_geetest`** adds `challenge`, `validate` and `seccode`, to post back exactly as the site's own front-end would; `code` keeps the raw JSON string CapSkip returns.
+- **`capskip_solve_altcha`** adds `token`, the base64 payload to submit verbatim in the site's form field named `altcha`, and `number`, the counter that solved the challenge; `code` holds the same string as `token`.
 
 Long solves emit MCP progress notifications, so a 45-second reCAPTCHA does not trip your client's tool-call timeout.
 
@@ -221,11 +228,11 @@ The MCP server is MIT-licensed and free. It requires the CapSkip desktop app, wh
 
 ### Which captchas can it solve?
 
-reCAPTCHA v2 (checkbox and invisible), reCAPTCHA v3, reCAPTCHA Enterprise, Cloudflare Turnstile, GeeTest v3, and image/text captchas. hCaptcha and FunCaptcha/Arkose are not supported.
+reCAPTCHA v2 (checkbox and invisible), reCAPTCHA v3, reCAPTCHA Enterprise, Cloudflare Turnstile, GeeTest v3, ALTCHA, and image/text captchas. hCaptcha and FunCaptcha/Arkose are not supported.
 
 ### Why does my reCAPTCHA v3 token get a low score?
 
-Google assigns v3 scores from signals such as IP reputation and browsing history. A solver returns a valid token, but cannot raise the score. If a site enforces a high threshold, solve from a cleaner IP — a proxy is supported on the reCAPTCHA, Turnstile and GeeTest tools.
+Google assigns v3 scores from signals such as IP reputation and browsing history. A solver returns a valid token, but cannot raise the score. If a site enforces a high threshold, solve from a cleaner IP — a proxy is supported on the reCAPTCHA, Turnstile, GeeTest and ALTCHA tools (for ALTCHA it applies only to the challenge fetch).
 
 ### Does it need my captcha to be on a public page?
 

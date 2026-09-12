@@ -48,6 +48,13 @@ export const geetestOutput = baseSolveOutput.extend({
   seccode: z.string().optional(),
 });
 
+export const altchaOutput = baseSolveOutput.extend({
+  /** The base64 payload to submit in the site's `altcha` form field, verbatim. */
+  token: z.string(),
+  /** The counter that satisfied the challenge. Absent if the payload did not decode. */
+  number: z.number().optional(),
+});
+
 export const statusOutput = z.object({
   reachable: z.boolean(),
   host: z.string(),
