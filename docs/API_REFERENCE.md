@@ -1,6 +1,6 @@
 # CapSkip MCP Server — API Reference
 
-Complete reference for all five tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
+Complete reference for all six tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
 
 Every solve tool declares an `outputSchema` and returns MCP `structuredContent` matching it, plus a human-readable text block for clients that do not render structured output. Every tool schema rejects unknown keys — a misspelled or unsupported parameter is rejected by name rather than silently ignored.
 

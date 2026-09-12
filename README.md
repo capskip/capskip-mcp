@@ -17,7 +17,7 @@ npx -y capskip-mcp
 
 ## What this solves
 
-An AI agent driving a browser hits a captcha and stops. This server gives it five tools so it can read the sitekey, solve the challenge, and carry on — without a human stepping in and without a per-solve API bill.
+An AI agent driving a browser hits a captcha and stops. This server gives it six tools so it can read the sitekey, solve the challenge, and carry on — without a human stepping in and without a per-solve API bill.
 
 CapSkip runs as a desktop app exposing a captcha-solving HTTP API on `127.0.0.1:8080`. `capskip-mcp` is a thin translation layer over that API: the fifth official CapSkip client, alongside the [Python](https://github.com/capskip/capskip-python), [Node.js](https://github.com/capskip/capskip-node), [PHP](https://github.com/capskip/capskip-php) and [.NET](https://github.com/capskip/capskip-dotnet) SDKs.
 
@@ -77,7 +77,7 @@ No install step — `npx` fetches and runs it on demand.
 
 ### 3. Restart your client
 
-It should list five tools, all prefixed `capskip_`.
+It should list six tools, all prefixed `capskip_`.
 
 ### 4. Ask your agent to solve a captcha
 
