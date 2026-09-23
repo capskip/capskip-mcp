@@ -1,6 +1,6 @@
 # CapSkip MCP Server — API Reference
 
-Complete reference for all six tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
+Complete reference for all nine tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
 
 Every solve tool declares an `outputSchema` and returns MCP `structuredContent` matching it, plus a human-readable text block for clients that do not render structured output. Every tool schema rejects unknown keys — a misspelled or unsupported parameter is rejected by name rather than silently ignored.
 
@@ -16,6 +16,9 @@ Every solve tool declares an `outputSchema` and returns MCP `structuredContent` 
 | `capskip_solve_turnstile` | Solve a Cloudflare Turnstile widget or challenge page | Yes |
 | `capskip_solve_geetest` | Solve a GeeTest v3 slide-puzzle captcha | Yes |
 | `capskip_solve_altcha` | Solve an ALTCHA proof-of-work challenge | Yes (challenge fetch only) |
+| `capskip_solve_capy` | Solve a Capy Puzzle captcha | Yes (puzzle-image fetch only) |
+| `capskip_solve_captchafox` | Solve a CaptchaFox challenge | Yes |
+| `capskip_solve_friendly_captcha` | Solve a Friendly Captcha proof-of-work challenge | Yes |
 
 ---
 
@@ -154,7 +157,7 @@ Solve a Google reCAPTCHA v2 or v3 widget, including invisible and Enterprise var
 | `proxy` | object | No | — | "Solve through this proxy so the token is issued against its IP." |
 | `timeout` | integer | No | `CAPSKIP_RECAPTCHA_TIMEOUT` (300) | "Seconds to wait before giving up. Maximum 600." |
 
-`proxy` shape (shared with `capskip_solve_turnstile`, `capskip_solve_geetest` and `capskip_solve_altcha`):
+`proxy` shape (shared with every solve tool except `capskip_solve_image_captcha`):
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -382,6 +385,218 @@ Text output: `Solved ALTCHA in 0.27s.\nSubmit this verbatim in the form field th
 ### Unsupported algorithms
 
 CapSkip solves the legacy scheme (SHA-1/256/384/512) and PoW v2 with PBKDF2 or SHA. **Argon2id and scrypt are refused**, not attempted: the solve returns `ERROR_CAPTCHA_UNSOLVABLE` and is never retried. ALTCHA recommends PBKDF2 as the default, so this affects a minority of sites.
+
+---
+
+## `capskip_solve_capy`
+
+Solve a Capy Puzzle captcha — a slide puzzle where a piece is dragged into a hole cut out of a photograph. IMPORTANT: unlike every other captcha tool here, the answer is NOT a single token. It is three values — `captchakey`, `challengekey` and `answer` — which all go into the target form, in fields named `capy_captchakey`, `capy_challengekey` and `capy_answer`. Submit the answer verbatim: it is the drag path the widget would have recorded, so trimming or re-encoding it invalidates the solve. The challenge key is single-use and short-lived, so submit promptly rather than caching the three values.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sitekey` | string | Yes | — | "The site's public Capy key, conventionally prefixed 'PUZZLE_'." |
+| `url` | string (URL) | Yes | — | "Full URL of the page the captcha appears on, including scheme." |
+| `api_server` | string | No | `https://jp.api.capy.me` | "The root of the Capy API the key lives behind, taken from the widget script URL." |
+| `proxy` | object | No | — | "Draw the puzzle image through this proxy. That fetch is the only request a Capy solve makes." |
+| `timeout` | integer | No | `CAPSKIP_TIMEOUT` (120) | "Seconds to wait before giving up. Maximum 600." |
+
+`proxy` has the same `{ type, uri }` shape documented under `capskip_solve_recaptcha` above.
+
+> `api.capy.me` no longer resolves, although several solver services still document it. The live host is `jp.api.capy.me`; if a site's widget points somewhere else, pass that as `api_server`.
+
+### Finding the captcha key
+
+It is in the page source as `capy_captchakey`, or in the widget script URL: `<script src="https://jp.api.capy.me/puzzle/get_js/?k=PUZZLE_XXXX">`.
+
+### Output shape
+
+| Field | Type | Always present | Description |
+|---|---|---|---|
+| `captchaId` | string | yes | CapSkip's internal id for this solve |
+| `code` | string | yes | The raw answer object, as a JSON string |
+| `solveSeconds` | number | yes | Wall-clock time the solve took |
+| `captchakey` | string | when the answer parsed | The value for the form's `capy_captchakey` field |
+| `challengekey` | string | when the answer parsed | The value for the form's `capy_challengekey` field. Single-use. |
+| `answer` | string | when the answer parsed | The value for the form's `capy_answer` field — the drag path |
+| `respKey` | string | when the answer parsed | Empty for a puzzle solve; present only for shape compatibility |
+
+### Example
+
+Request:
+
+```json
+{
+  "sitekey": "PUZZLE_Abc1dEFghIJKLM2no34P56q7rStu8v",
+  "url": "https://example.com/login"
+}
+```
+
+Response (`structuredContent`):
+
+```json
+{
+  "captchaId": "10433",
+  "code": "{\"captchakey\":\"PUZZLE_Abc1dEFghIJKLM2no34P56q7rStu8v\",\"challengekey\":\"BalY2gJaI8uA2SGVOZhqBQ3V0CYSNNGP\",\"answer\":\"0xax8ex0xax84x...\",\"respKey\":\"\"}",
+  "solveSeconds": 2.14,
+  "captchakey": "PUZZLE_Abc1dEFghIJKLM2no34P56q7rStu8v",
+  "challengekey": "BalY2gJaI8uA2SGVOZhqBQ3V0CYSNNGP",
+  "answer": "0xax8ex0xax84x0xkx7qx0x18x76x...",
+  "respKey": ""
+}
+```
+
+### Why a solve takes about two seconds
+
+Capy grades the wall-clock gap between issuing the puzzle and verifying the answer, and refuses anything superhuman with `CAPTCHA verification failed` — the same message a wrong answer gets. CapSkip therefore holds every result until two seconds have elapsed since it drew the puzzle. The detection itself takes about a tenth of a second; the rest is a deliberate wait. Nothing to configure.
+
+---
+
+## `capskip_solve_captchafox`
+
+Solve a CaptchaFox challenge. CaptchaFox scores the browser itself rather than asking the visitor to read anything, so most solves draw no puzzle at all. Returns a token to put in the form field named `cf-captcha-response`, verbatim — it is verified server side against the session that produced it, so any edit invalidates it.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sitekey` | string | Yes | — | "The public key the widget renders with, conventionally prefixed 'sk_'." |
+| `url` | string (URL) | Yes | — | "Full URL of the page the captcha appears on, including scheme." |
+| `api_server` | string | No | `https://cdn.captchafox.com/` | "The widget entry point the target page loads." |
+| `proxy` | object | No | — | "Solve from this network." |
+| `timeout` | integer | No | `CAPSKIP_RECAPTCHA_TIMEOUT` (300) | "Seconds to wait before giving up. Maximum 600." |
+
+### The page URL has to match the key
+
+CaptchaFox keys are registered against a list of allowed domains and the service checks the host before it issues anything. A key that is correct but used on a page outside that list is refused permanently, not intermittently — so a sitekey that fails immediately and consistently usually means the wrong page URL, not a bad key. CapSkip reports that case rather than retrying it, because retrying cannot help.
+
+### Choosing the widget source
+
+| `api_server` | Token | Default |
+|---|---|---|
+| `https://cdn.captchafox.com/` | Plain | Yes |
+| `https://s.uicdn.com/mampkg/…` | `MAM_` prefixed | No |
+
+Read the value from the `<script>` tag that loads the widget. Sending the wrong one still succeeds, but returns a token in a format the target site will not accept — a silent verification failure rather than an error.
+
+### Challenge types
+
+| Challenge | Frequency | Supported |
+|---|---|---|
+| Invisible | Usually | Yes |
+| Slide | Sometimes | Yes |
+| Image select | Rarely | No |
+| Audio | Rarely | No |
+
+The two unsupported ones are uncommon and a retry usually draws a different challenge, so treat an unsolvable result as a signal to resubmit rather than a permanent failure of the key.
+
+### Output shape
+
+| Field | Type | Always present | Description |
+|---|---|---|---|
+| `captchaId` | string | yes | CapSkip's internal id for this solve |
+| `code` | string | yes | The token — the same string as `token` |
+| `solveSeconds` | number | yes | Wall-clock time the solve took |
+| `token` | string | yes | The value to submit in the `cf-captcha-response` field |
+| `userAgent` | string | when the solve reported one | The UA the token was minted under — the browser's own, not one you sent |
+
+### Example
+
+Request:
+
+```json
+{
+  "sitekey": "sk_xtNxpk6fCdFbxh1_xJeGflSdCE9tn99G",
+  "url": "https://example.com/signup"
+}
+```
+
+Response (`structuredContent`):
+
+```json
+{
+  "captchaId": "10434",
+  "code": "177f50c25b845601e5c779cdb51b040d...",
+  "solveSeconds": 6.31,
+  "token": "177f50c25b845601e5c779cdb51b040d...",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ... Chrome/146.0.0.0 Safari/537.36"
+}
+```
+
+Submit the token under the reported `userAgent`, not your own: CapSkip solves in a real browser and the token is bound to that browser's identity.
+
+---
+
+## `capskip_solve_friendly_captcha`
+
+Solve a Friendly Captcha proof-of-work challenge. Nothing is shown on screen — the widget does arithmetic instead of asking the visitor to do anything.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sitekey` | string | Yes | — | "The data-sitekey attribute of the widget element — the one carrying class='frc-captcha'." |
+| `url` | string (URL) | Yes | — | "Full URL of the page the captcha appears on, including scheme." |
+| `version` | `"v1"` \| `"v2"` | No | `v1` | "The protocol version the site uses. Send this or module_script." |
+| `module_script` | string | No | — | "The src of the widget script tag carrying type='module'." |
+| `nomodule_script` | string | No | — | "The src of the widget script tag carrying 'nomodule'." |
+| `api_server` | string | No | `global` | "The data-residency tenant the sitekey belongs to: 'global', 'eu', or a full URL." |
+| `proxy` | object | No | — | "Solve from this network." |
+| `timeout` | integer | No | `CAPSKIP_RECAPTCHA_TIMEOUT` (300) | "Seconds to wait before giving up. Maximum 600." |
+
+### Version 1 and version 2
+
+Two entirely different protocols ship under this one name, sharing a brand and a sitekey namespace and nothing else, and a sitekey does not tell you which a site uses. Both are live. Solve the wrong one and you get a well-formed token the target site rejects, with no indication that the version was the problem.
+
+| `version` | Widget package | Script | Form field |
+|---|---|---|---|
+| `v1` | `friendly-challenge` | `widget.module.min.js` / `widget.min.js` | `frc-captcha-solution` |
+| `v2` | `@friendlycaptcha/sdk` | `site.min.js` | `frc-captcha-response` |
+
+CapSkip decides in this order, stopping at the first answer: the `version` parameter; then the script URL from `module_script` or `nomodule_script`, which is the most reliable signal because it is the build the site actually loads; then v1. The tool's text reply names the form field matching the version that was actually solved, so an agent does not have to work it out.
+
+A `version` outside `v1`/`v2` is refused by the schema before the call reaches CapSkip.
+
+### Output shape
+
+| Field | Type | Always present | Description |
+|---|---|---|---|
+| `captchaId` | string | yes | CapSkip's internal id for this solve |
+| `code` | string | yes | The token — the same string as `token` |
+| `solveSeconds` | number | yes | Wall-clock time the solve took |
+| `token` | string | yes | The value to submit, in `frc-captcha-solution` (v1) or `frc-captcha-response` (v2) |
+
+### Example
+
+Request:
+
+```json
+{
+  "sitekey": "FCMGEMUD2M567T8G",
+  "url": "https://example.com/signup",
+  "version": "v2"
+}
+```
+
+Response (`structuredContent`):
+
+```json
+{
+  "captchaId": "10435",
+  "code": "AQQA.vW7kd3CujKT8PaQgEcW18QaH...",
+  "solveSeconds": 18.4,
+  "token": "AQQA.vW7kd3CujKT8PaQgEcW18QaH..."
+}
+```
+
+### Token sizes differ sharply between versions
+
+A v1 token is four dot-separated parts and runs to a few hundred characters. A v2 token is a single opaque string beginning `AQQA.` and is roughly six kilobytes, so make sure whatever carries it — a hidden field, a database column, a proxied request — is sized for that.
+
+### Solve time is not a constant
+
+The service decides how much work a request is worth at the moment it is made, and raises that figure for addresses it has already seen a lot of: the published range between a fresh address and a heavily used one is close to thirty times the work for the same token. Budget for that in your timeout rather than assuming a fixed duration, and use a proxy pool past casual volume.
 
 ---
 

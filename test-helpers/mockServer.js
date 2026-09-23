@@ -59,6 +59,31 @@ const GEETEST_ANSWER = JSON.stringify({
 // so a test asserting structuredContent.number === ALTCHA_NUMBER can only pass
 // if the tool decoded it out of the payload.
 const ALTCHA_NUMBER = 9661;
+// Capy answers are not a token: three values that together go into the target
+// form. `answer` is the drag path the widget would have recorded, so the mock
+// carries a realistic one — the expansion is only meaningful against a real shape.
+const CAPY_SOLUTION = {
+  captchakey: 'PUZZLE_Abc1dEFghIJKLM2no34P56q7rStu8v',
+  challengekey: 'BalY2gJaI8uA2SGVOZhqBQ3V0CYSNNGP',
+  answer: '0xax8ex0xax84x0xkx7qx0x18x76x0x1ix6sx0x26x68x0x2gx5kx0x34x50x',
+  respKey: '',
+};
+
+const CAPTCHAFOX_TOKEN = '177f50c25b845601e5c779cdb51b040d523e8ab69efb4d5b343e28df07d05076';
+
+// The UA the browser actually minted the token under — deliberately not one a
+// caller could have sent, so a test can tell the two apart.
+const CAPTCHAFOX_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+  + '(KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36';
+
+// A v1 token: four dot-separated parts.
+const FRIENDLY_CAPTCHA_TOKEN = 'c62c4da36bbaf7f253873035832709ef.'
+  + 'aqwpWwdbzRWKY/UQAQwwpgAAAAAAAAAAM7hBvJOzqjc=.AAAAAArcCQABAAAAxv8QAAIAAACKYRgA.AgAB';
+
+// A v2 token is a single opaque string beginning AQQA. and runs to roughly six
+// kilobytes, which is what the tool reads to name the right form field.
+const FRIENDLY_CAPTCHA_V2_TOKEN = `AQQA.${'a'.repeat(6000)}`;
+
 const ALTCHA_TOKEN = 'eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiM2RkMjgyNTNiZTZjYzBjNTRkOTVmN2Y5OGM1MTdlNjgiLCJudW1iZXIiOjk2NjEsInNhbHQiOiI0NmQ1YjFjODg3MWU1MTUyZDkwMmVlM2Y/ZXhwaXJlcz0xODkzNDU2MDAwIiwic2lnbmF0dXJlIjoiNGIxY2YwZTBiZTBmNGU1MjQ3ZTUwYjBmOWE0NDk4MzAiLCJ0b29rIjoxNi41OH0=';
 
 // The other ALTCHA generation. A proof-of-work v2 answer has no top-level
@@ -139,6 +164,45 @@ function createMockServer() {
       } else {
         send(res, `OK|${ALTCHA_TOKEN}`);
       }
+    } else if (idType[cid] === 'capy') {
+      // The one method whose answer is an object rather than a string: json=1
+      // puts it straight into `request`, and plain text sends it as a single
+      // line of JSON after OK|.
+      if (wantJson) {
+        send(res, JSON.stringify({
+          status: 1,
+          request: CAPY_SOLUTION,
+          solution: CAPY_SOLUTION,
+        }), 'application/json');
+      } else {
+        send(res, `OK|${JSON.stringify(CAPY_SOLUTION)}`);
+      }
+    } else if (idType[cid] === 'captchafox') {
+      if (wantJson) {
+        send(res, JSON.stringify({
+          status: 1,
+          request: CAPTCHAFOX_TOKEN,
+          userAgent: CAPTCHAFOX_USER_AGENT,
+          solution: { token: CAPTCHAFOX_TOKEN, userAgent: CAPTCHAFOX_USER_AGENT },
+        }), 'application/json');
+      } else {
+        send(res, `OK|${CAPTCHAFOX_TOKEN}`);
+      }
+    } else if (idType[cid] === 'friendly_captcha') {
+      // A v2 solve is routed by the id prefix the submit handler assigns, so a
+      // test can exercise both token shapes against one mock.
+      const token = cid.startsWith('friendlyv2')
+        ? FRIENDLY_CAPTCHA_V2_TOKEN
+        : FRIENDLY_CAPTCHA_TOKEN;
+      if (wantJson) {
+        send(res, JSON.stringify({
+          status: 1,
+          request: token,
+          solution: { token },
+        }), 'application/json');
+      } else {
+        send(res, `OK|${token}`);
+      }
     } else if (wantJson && idType[cid] === 'turnstile') {
       send(res, `{"status":1,"request":"${CODE}","useragent":"${USER_AGENT}"}`, 'application/json');
     } else if (wantJson && idType[cid] === 'geetest' && !cid.startsWith('raw')) {
@@ -181,6 +245,11 @@ function createMockServer() {
       cid = `empty${ids}`;
     } else if (pageurl.includes('altchav2')) {
       cid = `altchav2${ids}`;
+    } else if (fields.method === 'friendly_captcha' && String(fields.version) === 'v2') {
+      // Routed off the submit's own version field, so the mock answers a v2
+      // request with a v2-shaped token — a single opaque AQQA. string of
+      // roughly six kilobytes rather than v1's four dot-separated parts.
+      cid = `friendlyv2${ids}`;
     } else if (pageurl.includes('rawanswer')) {
       cid = `raw${ids}`;
     } else {
@@ -244,6 +313,11 @@ module.exports = {
   GEETEST_SECCODE,
   GEETEST_ANSWER,
   ALTCHA_TOKEN,
+  CAPY_SOLUTION,
+  CAPTCHAFOX_TOKEN,
+  CAPTCHAFOX_USER_AGENT,
+  FRIENDLY_CAPTCHA_TOKEN,
+  FRIENDLY_CAPTCHA_V2_TOKEN,
   ALTCHA_NUMBER,
   ALTCHA_V2_TOKEN,
   ALTCHA_V2_NUMBER,

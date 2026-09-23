@@ -5,7 +5,7 @@
 [![Tests](https://github.com/capskip/capskip-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/capskip/capskip-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/capskip-mcp.svg)](https://www.npmjs.com/package/capskip-mcp)
 
-**A captcha solver [MCP](https://modelcontextprotocol.io) server that lets AI agents solve reCAPTCHA, Cloudflare Turnstile, GeeTest, ALTCHA and image captchas instead of stalling on them.**
+**A captcha solver [MCP](https://modelcontextprotocol.io) server that lets AI agents solve reCAPTCHA, Cloudflare Turnstile, GeeTest, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha and image captchas instead of stalling on them.**
 
 Works with Claude Desktop, Claude Code, Cursor, VS Code, and any Model Context Protocol client. Powered by [CapSkip](https://capskip.com) — a **local captcha solver** that runs on your own machine, licensed once rather than billed per solve.
 
@@ -17,7 +17,7 @@ npx -y capskip-mcp
 
 ## What this solves
 
-An AI agent driving a browser hits a captcha and stops. This server gives it six tools so it can read the sitekey, solve the challenge, and carry on — without a human stepping in and without a per-solve API bill.
+An AI agent driving a browser hits a captcha and stops. This server gives it nine tools so it can read the sitekey, solve the challenge, and carry on — without a human stepping in and without a per-solve API bill.
 
 CapSkip runs as a desktop app exposing a captcha-solving HTTP API on `127.0.0.1:8080`. `capskip-mcp` is a thin translation layer over that API: the fifth official CapSkip client, alongside the [Python](https://github.com/capskip/capskip-python), [Node.js](https://github.com/capskip/capskip-node), [PHP](https://github.com/capskip/capskip-php) and [.NET](https://github.com/capskip/capskip-dotnet) SDKs.
 
@@ -32,6 +32,9 @@ CapSkip runs as a desktop app exposing a captcha-solving HTTP API on `127.0.0.1:
 | **Cloudflare Turnstile solver** | `capskip_solve_turnstile` | Widget and interstitial challenge pages |
 | **GeeTest v3 solver** | `capskip_solve_geetest` | Slide puzzle; returns challenge/validate/seccode |
 | **ALTCHA solver** | `capskip_solve_altcha` | Proof-of-work; returns the token for the `altcha` field |
+| **Capy Puzzle solver** | `capskip_solve_capy` | Slide puzzle; returns three form values, not a token |
+| **CaptchaFox solver** | `capskip_solve_captchafox` | Returns the token for the `cf-captcha-response` field |
+| **Friendly Captcha solver** | `capskip_solve_friendly_captcha` | Proof-of-work; say which version (v1 or v2) |
 | **Image captcha solver** (text/OCR) | `capskip_solve_image_captcha` | File path, URL, data URI, or base64 |
 
 **Not supported: hCaptcha and FunCaptcha/Arkose.** There is no tool for them and `capskip_solve_recaptcha` will not work on one. hCaptcha is the easiest to misidentify since it also carries a `data-sitekey` — check for `class="h-captcha"` or a `js.hcaptcha.com` script first.
@@ -77,7 +80,7 @@ No install step — `npx` fetches and runs it on demand.
 
 ### 3. Restart your client
 
-It should list six tools, all prefixed `capskip_`.
+It should list nine tools, all prefixed `capskip_`.
 
 ### 4. Ask your agent to solve a captcha
 
@@ -114,6 +117,9 @@ CapSkip exposes the familiar `in.php` / `res.php` endpoints, so it works as a **
 | `capskip_solve_turnstile` | Solve a Cloudflare Turnstile widget or challenge page | `sitekey`, `url` |
 | `capskip_solve_geetest` | Solve a GeeTest v3 slide-puzzle captcha | `gt`, `challenge`, `url` |
 | `capskip_solve_altcha` | Solve an ALTCHA proof-of-work challenge | `url`, and one of `challenge_url` / `challenge_json` |
+| `capskip_solve_capy` | Solve a Capy Puzzle captcha | `sitekey`, `url` |
+| `capskip_solve_captchafox` | Solve a CaptchaFox challenge | `sitekey`, `url` |
+| `capskip_solve_friendly_captcha` | Solve a Friendly Captcha proof-of-work challenge | `sitekey`, `url` |
 
 > **There is no `min_score` parameter on `capskip_solve_recaptcha`.** reCAPTCHA v3 scores are assigned by Google from signals no solver has access to — local or cloud, none can raise a score after the fact. A `min_score` option would promise control that does not exist, so it is deliberately left out. Passing it anyway is rejected as an unrecognized key, not silently ignored.
 
@@ -153,10 +159,15 @@ For non-agent scripts, use the language SDKs directly — see the [Playwright](h
 | `CAPSKIP_HOST` | `127.0.0.1` | CapSkip host |
 | `CAPSKIP_PORT` | `8080` | API port from CapSkip settings |
 | `CAPSKIP_TIMEOUT` | `120` | Default `timeout` for `capskip_solve_image_captcha`, seconds |
-| `CAPSKIP_RECAPTCHA_TIMEOUT` | `300` | Default `timeout` for the reCAPTCHA / Turnstile / GeeTest tools, seconds |
+| `CAPSKIP_RECAPTCHA_TIMEOUT` | `300` | Default `timeout` for the reCAPTCHA / Turnstile / GeeTest / CaptchaFox / Friendly Captcha tools, seconds |
 
-ALTCHA uses `CAPSKIP_DEFAULT_TIMEOUT`, not the reCAPTCHA one — it is CPU
-proof-of-work measured in milliseconds, not a browser solve.
+ALTCHA and Capy use `CAPSKIP_DEFAULT_TIMEOUT`, not the reCAPTCHA one — neither
+is a browser solve. ALTCHA is CPU proof-of-work measured in milliseconds; a Capy
+solve is one HTTP fetch plus pixel math, held back to roughly two seconds because
+Capy refuses answers that arrive faster than a human could have produced them.
+
+Friendly Captcha is proof-of-work too but takes the longer timeout: the service
+sets the difficulty per request, and v2 always solves in a browser.
 
 | `CAPSKIP_POLLING_INTERVAL` | `5` | Max seconds between polls |
 
@@ -186,6 +197,9 @@ Every solve tool returns a human-readable text block and `structuredContent` mat
 - **`capskip_solve_turnstile`** adds `userAgent`. Submit the token with this exact User-Agent — Cloudflare rejects a token replayed under a different one.
 - **`capskip_solve_geetest`** adds `challenge`, `validate` and `seccode`, to post back exactly as the site's own front-end would; `code` keeps the raw JSON string CapSkip returns.
 - **`capskip_solve_altcha`** adds `token`, the base64 payload to submit verbatim in the site's form field named `altcha`, and `number`, the counter that solved the challenge; `code` holds the same string as `token`.
+- **`capskip_solve_capy`** adds `captchakey`, `challengekey` and `answer` — **not** a token. All three go into the target form, in fields named `capy_captchakey`, `capy_challengekey` and `capy_answer`; `code` keeps the raw answer as JSON. The `answer` is the drag path the widget would have recorded, so submit it verbatim, and promptly: the challenge key is single-use and short-lived.
+- **`capskip_solve_captchafox`** adds `token`, for the form field named `cf-captcha-response`, and `userAgent` when the solve reported one — the UA the browser minted the token under, not any you sent. Submit under that one.
+- **`capskip_solve_friendly_captcha`** adds `token`. The field it goes into differs by version: `frc-captcha-solution` on v1, `frc-captcha-response` on v2. The text reply names the right one for the version that was solved.
 
 Long solves emit MCP progress notifications, so a 45-second reCAPTCHA does not trip your client's tool-call timeout.
 
@@ -228,11 +242,11 @@ The MCP server is MIT-licensed and free. It requires the CapSkip desktop app, wh
 
 ### Which captchas can it solve?
 
-reCAPTCHA v2 (checkbox and invisible), reCAPTCHA v3, reCAPTCHA Enterprise, Cloudflare Turnstile, GeeTest v3, ALTCHA, and image/text captchas. hCaptcha and FunCaptcha/Arkose are not supported.
+reCAPTCHA v2 (checkbox and invisible), reCAPTCHA v3, reCAPTCHA Enterprise, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, and image/text captchas. hCaptcha and FunCaptcha/Arkose are not supported.
 
 ### Why does my reCAPTCHA v3 token get a low score?
 
-Google assigns v3 scores from signals such as IP reputation and browsing history. A solver returns a valid token, but cannot raise the score. If a site enforces a high threshold, solve from a cleaner IP — a proxy is supported on the reCAPTCHA, Turnstile, GeeTest and ALTCHA tools (for ALTCHA it applies only to the challenge fetch).
+Google assigns v3 scores from signals such as IP reputation and browsing history. A solver returns a valid token, but cannot raise the score. If a site enforces a high threshold, solve from a cleaner IP — a proxy is supported on every solve tool except the image one (for ALTCHA it applies only to the challenge fetch, and for Capy only to the puzzle-image fetch).
 
 ### Does it need my captcha to be on a public page?
 

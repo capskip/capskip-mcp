@@ -55,6 +55,35 @@ export const altchaOutput = baseSolveOutput.extend({
   number: z.number().optional(),
 });
 
+export const capyOutput = baseSolveOutput.extend({
+  /** The value for the target form's `capy_captchakey` field. */
+  captchakey: z.string().optional(),
+  /** The value for the target form's `capy_challengekey` field. Single-use. */
+  challengekey: z.string().optional(),
+  /** The value for the target form's `capy_answer` field — the drag path, verbatim. */
+  answer: z.string().optional(),
+  /** Empty for a puzzle solve; present only for shape compatibility. */
+  respKey: z.string().optional(),
+});
+
+export const captchaFoxOutput = baseSolveOutput.extend({
+  /** The token to submit in the site's `cf-captcha-response` field, verbatim. */
+  token: z.string(),
+  /**
+   * The User-Agent the token was minted under — the browser's own, not one the
+   * caller sent. Absent when the solve captured none rather than guessed.
+   */
+  userAgent: z.string().optional(),
+});
+
+export const friendlyCaptchaOutput = baseSolveOutput.extend({
+  /**
+   * The token to submit verbatim — in `frc-captcha-solution` on v1, or
+   * `frc-captcha-response` on v2. The field names differ between versions.
+   */
+  token: z.string(),
+});
+
 export const statusOutput = z.object({
   reachable: z.boolean(),
   host: z.string(),

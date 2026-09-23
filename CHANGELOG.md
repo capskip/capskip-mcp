@@ -10,6 +10,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Nothing yet. Add entries here as changes land; they move into a version
 section at release time.
 
+## [1.2.0] - 2026-09-22
+
+### Added
+
+- **`capskip_solve_capy`** — solve a Capy Puzzle captcha. Unlike every other
+  solve tool, the answer is **not a token**: the result carries `captchakey`,
+  `challengekey` and `answer`, which all go into the target form's
+  `capy_captchakey`, `capy_challengekey` and `capy_answer` fields. The text reply
+  names all three, since an agent acting on `code` alone would post a JSON blob
+  into a field expecting a drag path. Optional `api_server` and `proxy`.
+- **`capskip_solve_captchafox`** — solve a CaptchaFox challenge. Returns `token`
+  for the form's `cf-captcha-response` field, plus `userAgent` when the solve
+  reported one: the UA the browser actually minted the token under, which is not
+  one the caller sent. Optional `api_server` selects the widget source (the MAM
+  package returns a `MAM_` prefixed token) and `proxy`.
+- **`capskip_solve_friendly_captcha`** — solve a Friendly Captcha proof-of-work
+  challenge. Takes `version` (`v1`/`v2`) or `module_script` / `nomodule_script`
+  so CapSkip can read the version off the build the site loads, plus optional
+  `api_server` for the data-residency tenant and `proxy`. The text reply names
+  the form field for the version that was actually solved —
+  `frc-captcha-solution` on v1, `frc-captcha-response` on v2 — because mixing
+  those up is the single most common way a working integration breaks.
+- Output schemas `capyOutput`, `captchaFoxOutput` and `friendlyCaptchaOutput`.
+
+### Changed
+
+- Requires `capskip` (the Node SDK) `^1.3.0`, which is where the three new solve
+  methods live.
+- The server's instructions now list Capy, CaptchaFox and Friendly Captcha among
+  the types it can solve, so a client choosing a tool from the listing sees them.
+
+### Notes
+
+- CaptchaFox and Friendly Captcha use `CAPSKIP_RECAPTCHA_TIMEOUT`: the first is a
+  real browser solve, and the second has its difficulty set per request by the
+  service (and always solves in a browser on v2). Capy uses
+  `CAPSKIP_TIMEOUT` — it is one HTTP fetch plus pixel math, though it still takes
+  about two seconds because Capy refuses answers that arrive faster than a human
+  could have produced them.
+
 ## [1.1.0] - 2026-09-12
 
 ### Added

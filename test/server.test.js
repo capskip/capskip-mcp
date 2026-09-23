@@ -12,6 +12,10 @@ const SOLVE_TOOLS = [
   'capskip_solve_recaptcha',
   'capskip_solve_turnstile',
   'capskip_solve_geetest',
+  'capskip_solve_altcha',
+  'capskip_solve_capy',
+  'capskip_solve_captchafox',
+  'capskip_solve_friendly_captcha',
 ];
 
 test('the advertised version matches package.json', async () => {

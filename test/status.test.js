@@ -6,12 +6,15 @@ const http = require('node:http');
 
 const { startHarness } = require('../test-helpers/harness.js');
 
-test('all six tools are advertised with the capskip_ prefix', async () => {
+test('all nine tools are advertised with the capskip_ prefix', async () => {
   const { client, close } = await startHarness();
   try {
     const names = (await client.listTools()).tools.map((t) => t.name).sort();
     assert.deepStrictEqual(names, [
       'capskip_solve_altcha',
+      'capskip_solve_captchafox',
+      'capskip_solve_capy',
+      'capskip_solve_friendly_captcha',
       'capskip_solve_geetest',
       'capskip_solve_image_captcha',
       'capskip_solve_recaptcha',

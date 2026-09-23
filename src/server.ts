@@ -3,6 +3,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CapSkipConfig } from './config.js';
 import { createContext } from './solver.js';
 import { registerAltchaTool } from './tools/altcha.js';
+import { registerCaptchaFoxTool } from './tools/captchafox.js';
+import { registerCapyTool } from './tools/capy.js';
+import { registerFriendlyCaptchaTool } from './tools/friendlycaptcha.js';
 import { registerGeetestTool } from './tools/geetest.js';
 import { registerImageTool } from './tools/image.js';
 import { registerRecaptchaTool } from './tools/recaptcha.js';
@@ -10,7 +13,7 @@ import { registerStatusTool } from './tools/status.js';
 import { registerTurnstileTool } from './tools/turnstile.js';
 
 export const SERVER_NAME = 'capskip';
-export const SERVER_VERSION = '1.1.0';
+export const SERVER_VERSION = '1.2.0';
 
 /** Build a fully-registered MCP server. Does not connect a transport. */
 export function createServer(config: CapSkipConfig): McpServer {
@@ -22,7 +25,8 @@ export function createServer(config: CapSkipConfig): McpServer {
         + 'tools when browser automation is blocked by a captcha: read the sitekey '
         + 'from the page, call the matching tool, then place the returned token in '
         + "the page's response field. CapSkip solves image captchas, reCAPTCHA v2 "
-        + 'and v3, Cloudflare Turnstile, GeeTest v3, and ALTCHA — it cannot solve hCaptcha '
+        + 'and v3, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox '
+        + 'and Friendly Captcha — it cannot solve hCaptcha '
         + 'or FunCaptcha/Arkose, so do not call these tools for those. An hCaptcha '
         + 'widget renders as <div class="h-captcha" data-sitekey="…">, which is '
         + 'easy to mistake for reCAPTCHA when scanning the DOM for data-sitekey. '
@@ -39,6 +43,9 @@ export function createServer(config: CapSkipConfig): McpServer {
   registerTurnstileTool(server, ctx);
   registerGeetestTool(server, ctx);
   registerAltchaTool(server, ctx);
+  registerCapyTool(server, ctx);
+  registerCaptchaFoxTool(server, ctx);
+  registerFriendlyCaptchaTool(server, ctx);
 
   return server;
 }
