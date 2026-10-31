@@ -84,6 +84,14 @@ const FRIENDLY_CAPTCHA_TOKEN = 'c62c4da36bbaf7f253873035832709ef.'
 // kilobytes, which is what the tool reads to name the right form field.
 const FRIENDLY_CAPTCHA_V2_TOKEN = `AQQA.${'a'.repeat(6000)}`;
 
+// An AWS WAF answer is a pair that only works together, so like Capy's it is an
+// object: json=1 puts it straight into `request` (with no createTask `solution`),
+// and plain text sends it as one line of JSON after OK|.
+const AMAZON_WAF_SOLUTION = {
+  captcha_voucher: 'eyJ2b3VjaGVyIjoiRVhBTVBMRSJ9.9QwZcEXAMPLEvoucherJk4LmN0pQ',
+  existing_token: '7d4c2a91-EXAMPLE-4f0b-9e6d-3a1b5c8e2f70:EQoAeXAMPLEtokenAAAA:Wm9wc2E=',
+};
+
 const ALTCHA_TOKEN = 'eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiM2RkMjgyNTNiZTZjYzBjNTRkOTVmN2Y5OGM1MTdlNjgiLCJudW1iZXIiOjk2NjEsInNhbHQiOiI0NmQ1YjFjODg3MWU1MTUyZDkwMmVlM2Y/ZXhwaXJlcz0xODkzNDU2MDAwIiwic2lnbmF0dXJlIjoiNGIxY2YwZTBiZTBmNGU1MjQ3ZTUwYjBmOWE0NDk4MzAiLCJ0b29rIjoxNi41OH0=';
 
 // The other ALTCHA generation. A proof-of-work v2 answer has no top-level
@@ -163,6 +171,12 @@ function createMockServer() {
         }), 'application/json');
       } else {
         send(res, `OK|${ALTCHA_TOKEN}`);
+      }
+    } else if (idType[cid] === 'amazon_waf') {
+      if (wantJson) {
+        send(res, JSON.stringify({ status: 1, request: AMAZON_WAF_SOLUTION }), 'application/json');
+      } else {
+        send(res, `OK|${JSON.stringify(AMAZON_WAF_SOLUTION)}`);
       }
     } else if (idType[cid] === 'capy') {
       // The one method whose answer is an object rather than a string: json=1
@@ -314,6 +328,7 @@ module.exports = {
   GEETEST_ANSWER,
   ALTCHA_TOKEN,
   CAPY_SOLUTION,
+  AMAZON_WAF_SOLUTION,
   CAPTCHAFOX_TOKEN,
   CAPTCHAFOX_USER_AGENT,
   FRIENDLY_CAPTCHA_TOKEN,

@@ -10,6 +10,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Nothing yet. Add entries here as changes land; they move into a version
 section at release time.
 
+## [1.3.0] - 2026-11-01
+
+### Added
+
+- **`capskip_solve_amazon_waf`** — solve an AWS WAF (Amazon WAF) CAPTCHA, on a
+  405 challenge page or in a JS-API widget. Only `sitekey` and `url` are
+  required; optional `iv` / `context` (both or neither), `challenge_script`,
+  `captcha_script`, `jsapiScript` and `proxy`. The answer is **not the cookie**:
+  the result carries `captcha_voucher` and `existing_token`, and the text reply
+  says to POST them to the `voucher` endpoint beside the page's challenge.js
+  (naming the exact URL when `challenge_script` was passed), whose `token` is
+  the `aws-waf-token`.
+- Output schema `amazonWafOutput`.
+
+### Changed
+
+- Requires `capskip` (the Node SDK) `^1.4.0`, which is where `amazonWaf()` lives.
+- The server's instructions now list AWS WAF among the types it can solve.
+
+### Fixed
+
+- The docs named `CAPSKIP_DEFAULT_TIMEOUT`, which does not exist, and listed
+  stale tool and type counts. The variable is `CAPSKIP_TIMEOUT`.
+
+### Notes
+
+- AWS WAF uses `CAPSKIP_RECAPTCHA_TIMEOUT`: a real browser mints the token the
+  voucher is issued for.
+
 ## [1.2.0] - 2026-09-22
 
 ### Added

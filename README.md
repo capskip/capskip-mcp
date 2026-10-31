@@ -5,7 +5,7 @@
 [![Tests](https://github.com/capskip/capskip-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/capskip/capskip-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/capskip-mcp.svg)](https://www.npmjs.com/package/capskip-mcp)
 
-**A captcha solver [MCP](https://modelcontextprotocol.io) server that lets AI agents solve reCAPTCHA, Cloudflare Turnstile, GeeTest, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha and image captchas instead of stalling on them.**
+**A captcha solver [MCP](https://modelcontextprotocol.io) server that lets AI agents solve reCAPTCHA, Cloudflare Turnstile, GeeTest, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, AWS WAF and image captchas instead of stalling on them.**
 
 Works with Claude Desktop, Claude Code, Cursor, VS Code, and any Model Context Protocol client. Powered by [CapSkip](https://capskip.com) — a **local captcha solver** that runs on your own machine, licensed once rather than billed per solve.
 
@@ -17,7 +17,7 @@ npx -y capskip-mcp
 
 ## What this solves
 
-An AI agent driving a browser hits a captcha and stops. This server gives it nine tools so it can read the sitekey, solve the challenge, and carry on — without a human stepping in and without a per-solve API bill.
+An AI agent driving a browser hits a captcha and stops. This server gives it ten tools so it can read the sitekey, solve the challenge, and carry on — without a human stepping in and without a per-solve API bill.
 
 CapSkip runs as a desktop app exposing a captcha-solving HTTP API on `127.0.0.1:8080`. `capskip-mcp` is a thin translation layer over that API: the fifth official CapSkip client, alongside the [Python](https://github.com/capskip/capskip-python), [Node.js](https://github.com/capskip/capskip-node), [PHP](https://github.com/capskip/capskip-php) and [.NET](https://github.com/capskip/capskip-dotnet) SDKs.
 
@@ -35,6 +35,7 @@ CapSkip runs as a desktop app exposing a captcha-solving HTTP API on `127.0.0.1:
 | **Capy Puzzle solver** | `capskip_solve_capy` | Slide puzzle; returns three form values, not a token |
 | **CaptchaFox solver** | `capskip_solve_captchafox` | Returns the token for the `cf-captcha-response` field |
 | **Friendly Captcha solver** | `capskip_solve_friendly_captcha` | Proof-of-work; say which version (v1 or v2) |
+| **AWS WAF CAPTCHA solver** (Amazon WAF) | `capskip_solve_amazon_waf` | Challenge page or widget; returns the voucher pair, not the cookie |
 | **Image captcha solver** (text/OCR) | `capskip_solve_image_captcha` | File path, URL, data URI, or base64 |
 
 **Not supported: hCaptcha and FunCaptcha/Arkose.** There is no tool for them and `capskip_solve_recaptcha` will not work on one. hCaptcha is the easiest to misidentify since it also carries a `data-sitekey` — check for `class="h-captcha"` or a `js.hcaptcha.com` script first.
@@ -80,7 +81,7 @@ No install step — `npx` fetches and runs it on demand.
 
 ### 3. Restart your client
 
-It should list nine tools, all prefixed `capskip_`.
+It should list ten tools, all prefixed `capskip_`.
 
 ### 4. Ask your agent to solve a captcha
 
@@ -120,6 +121,7 @@ CapSkip exposes the familiar `in.php` / `res.php` endpoints, so it works as a **
 | `capskip_solve_capy` | Solve a Capy Puzzle captcha | `sitekey`, `url` |
 | `capskip_solve_captchafox` | Solve a CaptchaFox challenge | `sitekey`, `url` |
 | `capskip_solve_friendly_captcha` | Solve a Friendly Captcha proof-of-work challenge | `sitekey`, `url` |
+| `capskip_solve_amazon_waf` | Solve an AWS WAF (Amazon WAF) CAPTCHA | `sitekey`, `url` |
 
 > **There is no `min_score` parameter on `capskip_solve_recaptcha`.** reCAPTCHA v3 scores are assigned by Google from signals no solver has access to — local or cloud, none can raise a score after the fact. A `min_score` option would promise control that does not exist, so it is deliberately left out. Passing it anyway is rejected as an unrecognized key, not silently ignored.
 
@@ -158,10 +160,10 @@ For non-agent scripts, use the language SDKs directly — see the [Playwright](h
 | `CAPSKIP_API_KEY` | `capskip` | Any string when key validation is off |
 | `CAPSKIP_HOST` | `127.0.0.1` | CapSkip host |
 | `CAPSKIP_PORT` | `8080` | API port from CapSkip settings |
-| `CAPSKIP_TIMEOUT` | `120` | Default `timeout` for `capskip_solve_image_captcha`, seconds |
-| `CAPSKIP_RECAPTCHA_TIMEOUT` | `300` | Default `timeout` for the reCAPTCHA / Turnstile / GeeTest / CaptchaFox / Friendly Captcha tools, seconds |
+| `CAPSKIP_TIMEOUT` | `120` | Default `timeout` for the image / ALTCHA / Capy tools, seconds |
+| `CAPSKIP_RECAPTCHA_TIMEOUT` | `300` | Default `timeout` for the reCAPTCHA / Turnstile / GeeTest / CaptchaFox / Friendly Captcha / AWS WAF tools, seconds |
 
-ALTCHA and Capy use `CAPSKIP_DEFAULT_TIMEOUT`, not the reCAPTCHA one — neither
+ALTCHA and Capy use `CAPSKIP_TIMEOUT`, not the reCAPTCHA one — neither
 is a browser solve. ALTCHA is CPU proof-of-work measured in milliseconds; a Capy
 solve is one HTTP fetch plus pixel math, held back to roughly two seconds because
 Capy refuses answers that arrive faster than a human could have produced them.
@@ -200,6 +202,7 @@ Every solve tool returns a human-readable text block and `structuredContent` mat
 - **`capskip_solve_capy`** adds `captchakey`, `challengekey` and `answer` — **not** a token. All three go into the target form, in fields named `capy_captchakey`, `capy_challengekey` and `capy_answer`; `code` keeps the raw answer as JSON. The `answer` is the drag path the widget would have recorded, so submit it verbatim, and promptly: the challenge key is single-use and short-lived.
 - **`capskip_solve_captchafox`** adds `token`, for the form field named `cf-captcha-response`, and `userAgent` when the solve reported one — the UA the browser minted the token under, not any you sent. Submit under that one.
 - **`capskip_solve_friendly_captcha`** adds `token`. The field it goes into differs by version: `frc-captcha-solution` on v1, `frc-captcha-response` on v2. The text reply names the right one for the version that was solved.
+- **`capskip_solve_amazon_waf`** adds `captcha_voucher` and `existing_token` — **not** the cookie. The two only work as a pair: POST them as JSON to the `voucher` endpoint in the same folder as the page's challenge.js, and the response's `token` is the `aws-waf-token` cookie. The text reply spells out that step, with the exact URL when you passed `challenge_script`. Exchange the pair promptly rather than storing it.
 
 Long solves emit MCP progress notifications, so a 45-second reCAPTCHA does not trip your client's tool-call timeout.
 
@@ -242,7 +245,7 @@ The MCP server is MIT-licensed and free. It requires the CapSkip desktop app, wh
 
 ### Which captchas can it solve?
 
-reCAPTCHA v2 (checkbox and invisible), reCAPTCHA v3, reCAPTCHA Enterprise, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, and image/text captchas. hCaptcha and FunCaptcha/Arkose are not supported.
+reCAPTCHA v2 (checkbox and invisible), reCAPTCHA v3, reCAPTCHA Enterprise, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, AWS WAF (Amazon WAF), and image/text captchas. hCaptcha and FunCaptcha/Arkose are not supported.
 
 ### Why does my reCAPTCHA v3 token get a low score?
 

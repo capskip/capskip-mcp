@@ -21,6 +21,7 @@ test('the built entrypoint serves tools over stdio', async () => {
     const names = (await client.listTools()).tools.map((t) => t.name).sort();
     assert.deepStrictEqual(names, [
       'capskip_solve_altcha',
+      'capskip_solve_amazon_waf',
       'capskip_solve_captchafox',
       'capskip_solve_capy',
       'capskip_solve_friendly_captcha',

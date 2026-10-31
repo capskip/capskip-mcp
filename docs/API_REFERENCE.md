@@ -1,6 +1,6 @@
 # CapSkip MCP Server — API Reference
 
-Complete reference for all nine tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
+Complete reference for all ten tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
 
 Every solve tool declares an `outputSchema` and returns MCP `structuredContent` matching it, plus a human-readable text block for clients that do not render structured output. Every tool schema rejects unknown keys — a misspelled or unsupported parameter is rejected by name rather than silently ignored.
 
@@ -19,6 +19,7 @@ Every solve tool declares an `outputSchema` and returns MCP `structuredContent` 
 | `capskip_solve_capy` | Solve a Capy Puzzle captcha | Yes (puzzle-image fetch only) |
 | `capskip_solve_captchafox` | Solve a CaptchaFox challenge | Yes |
 | `capskip_solve_friendly_captcha` | Solve a Friendly Captcha proof-of-work challenge | Yes |
+| `capskip_solve_amazon_waf` | Solve an AWS WAF (Amazon WAF) CAPTCHA | Yes |
 
 ---
 
@@ -597,6 +598,82 @@ A v1 token is four dot-separated parts and runs to a few hundred characters. A v
 ### Solve time is not a constant
 
 The service decides how much work a request is worth at the moment it is made, and raises that figure for addresses it has already seen a lot of: the published range between a fresh address and a heavily used one is close to thirty times the work for the same token. Budget for that in your timeout rather than assuming a fixed duration, and use a proxy pool past casual volume.
+
+---
+
+## `capskip_solve_amazon_waf`
+
+Solve an AWS WAF (Amazon WAF) CAPTCHA — the image-grid or toy-car puzzle Amazon's firewall shows on a 405 challenge page (`window.gokuProps` plus challenge.js/captcha.js from an awswaf.com host) or in a JS-API widget (jsapi.js plus `AwsWafCaptcha.renderCaptcha`). Only `sitekey` and `url` are required. IMPORTANT: the answer is NOT the cookie. It is a pair, `captcha_voucher` and `existing_token`, which only work together: POST them as JSON to the `voucher` endpoint in the same folder as the page's challenge.js, and the response's `token` field is the `aws-waf-token`. Send that as the `aws-waf-token` cookie on the protected domain (some widget pages use an `x-aws-waf-token` header instead) and repeat the request.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sitekey` | string | Yes | — | "On a challenge page, the gokuProps.key value — a long key usually starting 'AQIDAH'. On a widget page, the apiKey passed to renderCaptcha — a long key ending in a short suffix such as '_0_1'." |
+| `url` | string (URL) | Yes | — | "Full URL of the page the captcha appears on, including scheme." |
+| `iv` | string | No | read from the page | "gokuProps.iv from a challenge page. Send it together with context, or leave both out." |
+| `context` | string | No | read from the page | "gokuProps.context from a challenge page. Send it together with iv, or leave both out." |
+| `challenge_script` | string (URL) | No | read from the page | "The full https URL of the page's challenge.js." |
+| `captcha_script` | string (URL) | No | read from the page | "The full https URL of the page's captcha.js." |
+| `jsapiScript` | string (URL) | No | — | "The full https URL of the page's jsapi.js (widget pages only)." |
+| `proxy` | object | No | — | "Solve through this proxy." |
+| `timeout` | integer | No | `CAPSKIP_RECAPTCHA_TIMEOUT` (300) | "Seconds to wait before giving up. Maximum 600." |
+
+`proxy` has the same `{ type, uri }` shape documented under `capskip_solve_recaptcha` above.
+
+Refused before anything reaches CapSkip: `iv` without `context` (or the other way round), and any script URL that is not https on an awswaf.com host ending in challenge.js, captcha.js or jsapi.js — CapSkip POSTs the answer to the host those scripts name, so it accepts no other.
+
+### Finding the values
+
+- **Challenge page.** Keep the body of the HTTP 405 response. `window.gokuProps` holds `key` (send it as `sitekey`), `iv` and `context`; the two `<script>` tags give `challenge_script` and `captcha_script`. Anything you leave out is read from `url` at solve time, which is the safer choice when your copy of the page is more than a few minutes old.
+- **Widget page.** Look for the jsapi.js script and the `AwsWafCaptcha.renderCaptcha(..., { apiKey })` call. Send the `apiKey` as `sitekey` and the jsapi.js URL as `jsapiScript`, with no `iv` or `context`.
+
+### Output shape
+
+| Field | Type | Always present | Description |
+|---|---|---|---|
+| `captchaId` | string | yes | CapSkip's internal id for this solve |
+| `code` | string | yes | The raw answer object, as a JSON string |
+| `solveSeconds` | number | yes | Wall-clock time the solve took |
+| `captcha_voucher` | string | when the answer parsed | AWS WAF's proof the puzzle was answered |
+| `existing_token` | string | when the answer parsed | The token the voucher was issued for |
+
+### Example
+
+Request:
+
+```json
+{
+  "sitekey": "AQIDAHjcYuEXAMPLEghicBgQ/7bFaQZ+m5FKCMDnO+vTbNg96AHDh0IR5vgzHNceHYqZR+GOAAAAfjB8",
+  "url": "https://www.example.com/",
+  "iv": "CgAFRDIjfgAAA5yY",
+  "context": "Rbp3r8fvbuhmrCqpUe8Mh1TLvs8OSKJZiSs2vCF4dt9rxVZI7xYJa2n5k/9r+XaXe7KUIu2I8nXTDHHkDvIOTDc2",
+  "challenge_script": "https://3f2a9c7d41b0.edge.sdk.awswaf.com/3f2a9c7d41b0/8e51d0c7a2f4/challenge.js"
+}
+```
+
+Response (`structuredContent`):
+
+```json
+{
+  "captchaId": "10571",
+  "code": "{\"captcha_voucher\":\"eyJ2b3VjaGVyIjoiRVhBTVBMRSJ9.9QwZcEXAMPLEvoucherJk4LmN0pQ\",\"existing_token\":\"7d4c2a91-EXAMPLE-4f0b-9e6d-3a1b5c8e2f70:EQoAeXAMPLEtokenAAAA:Wm9wc2E=\"}",
+  "solveSeconds": 8.31,
+  "captcha_voucher": "eyJ2b3VjaGVyIjoiRVhBTVBMRSJ9.9QwZcEXAMPLEvoucherJk4LmN0pQ",
+  "existing_token": "7d4c2a91-EXAMPLE-4f0b-9e6d-3a1b5c8e2f70:EQoAeXAMPLEtokenAAAA:Wm9wc2E="
+}
+```
+
+### Turning the pair into the cookie
+
+```
+POST https://3f2a9c7d41b0.edge.sdk.awswaf.com/3f2a9c7d41b0/8e51d0c7a2f4/voucher
+Content-Type: text/plain;charset=UTF-8
+
+{"captcha_voucher":"…","existing_token":"…"}
+```
+
+The response is a JSON object whose `token` field is the `aws-waf-token`. It stays valid for the site's immunity time, five minutes by default; when the challenge comes back, solve again.
 
 ---
 

@@ -144,7 +144,7 @@ The solve did not finish within 300.0s. Raise the timeout parameter, or check Ca
 { "sitekey": "...", "url": "...", "timeout": 600 }
 ```
 
-2. Or raise the default so you do not have to pass it every time. `CAPSKIP_TIMEOUT` covers `capskip_solve_image_captcha`; `CAPSKIP_RECAPTCHA_TIMEOUT` covers the other three tools. These env-level defaults have their own bound (1–3600s), independent of the 600s per-call cap:
+2. Or raise the default so you do not have to pass it every time. `CAPSKIP_TIMEOUT` covers `capskip_solve_image_captcha`, `capskip_solve_altcha` and `capskip_solve_capy`; `CAPSKIP_RECAPTCHA_TIMEOUT` covers the other six solve tools. These env-level defaults have their own bound (1–3600s), independent of the 600s per-call cap:
 
 ```json
 "env": { "CAPSKIP_RECAPTCHA_TIMEOUT": "600" }
@@ -212,7 +212,7 @@ If the site loads GeeTest from a non-default domain, pass it through as `api_ser
 
 **Symptom:** `capskip_solve_recaptcha` is called on a widget that has a `data-sitekey`, and every attempt fails, times out, or returns a token the site rejects.
 
-**Cause:** The captcha is not a reCAPTCHA. CapSkip supports exactly five types — image captchas, reCAPTCHA v2/v3, Cloudflare Turnstile, GeeTest v3, and ALTCHA. It **cannot** solve hCaptcha or FunCaptcha/Arkose, and there is no tool for them.
+**Cause:** The captcha is not a reCAPTCHA. CapSkip supports exactly nine types — image captchas, reCAPTCHA v2/v3, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, and AWS WAF. It **cannot** solve hCaptcha or FunCaptcha/Arkose, and there is no tool for them.
 
 hCaptcha is easy to misidentify because it also carries a `data-sitekey`:
 

@@ -84,6 +84,13 @@ export const friendlyCaptchaOutput = baseSolveOutput.extend({
   token: z.string(),
 });
 
+export const amazonWafOutput = baseSolveOutput.extend({
+  /** AWS WAF's proof the puzzle was answered. Only works paired with existing_token. */
+  captcha_voucher: z.string().optional(),
+  /** The token the voucher was issued for. POST both to the `voucher` endpoint. */
+  existing_token: z.string().optional(),
+});
+
 export const statusOutput = z.object({
   reachable: z.boolean(),
   host: z.string(),
