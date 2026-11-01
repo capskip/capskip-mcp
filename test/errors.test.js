@@ -77,6 +77,23 @@ test('ERROR_BAD_PARAMETERS points at the supplied values', () => {
   assert.match(text, /Re-check the values/i);
 });
 
+test('ERROR_WRONG_USERAGENT says which User-Agent CapSkip takes', () => {
+  const text = textOf(mapError(new ApiException('ERROR_WRONG_USERAGENT'), CTX));
+  assert.match(text, /Chrome for Windows/);
+  assert.match(text, /Leave userAgent out/);
+});
+
+test('ERROR_PROXY_BANNED says to change the address', () => {
+  const text = textOf(mapError(new ApiException('ERROR_PROXY_BANNED'), CTX));
+  assert.match(text, /banned/);
+  assert.match(text, /different proxy/);
+});
+
+test('ERROR_PROXY_CONNECT_REFUSED points at the proxy', () => {
+  const text = textOf(mapError(new ApiException('ERROR_PROXY_CONNECT_REFUSED'), CTX));
+  assert.match(text, /through the proxy/);
+});
+
 test('an unmapped API error is passed through rather than swallowed', () => {
   // The fallback matters most for codes added to CapSkip after this release: the
   // model gets the raw code to reason about instead of a generic failure.

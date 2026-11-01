@@ -17,6 +17,7 @@ const SOLVE_TOOLS = [
   'capskip_solve_captchafox',
   'capskip_solve_friendly_captcha',
   'capskip_solve_amazon_waf',
+  'capskip_solve_datadome',
 ];
 
 test('the advertised version matches package.json', async () => {

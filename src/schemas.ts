@@ -91,6 +91,18 @@ export const amazonWafOutput = baseSolveOutput.extend({
   existing_token: z.string().optional(),
 });
 
+export const dataDomeOutput = baseSolveOutput.extend({
+  /** The `datadome=...` pair alone, for a Cookie header. `code` keeps the attributes. */
+  cookie: z.string(),
+  /** The User-Agent the cookie was earned with. Send it with every request carrying the cookie. */
+  userAgent: z.string().optional(),
+  /**
+   * Present only when no proxy was passed and CapSkip solved through its own
+   * DataDome proxy list: that proxy as host:port. The cookie works only through it.
+   */
+  proxy: z.string().optional(),
+});
+
 export const statusOutput = z.object({
   reachable: z.boolean(),
   host: z.string(),

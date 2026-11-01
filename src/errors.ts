@@ -52,6 +52,28 @@ const API_CODES: Array<[RegExp, (ctx: ErrorContext) => string]> = [
     () => 'CapSkip could not read that image. Check the file is a valid, uncorrupted PNG or JPEG.',
   ],
   [
+    /ERROR_WRONG_USERAGENT/,
+    () =>
+      'CapSkip refused the userAgent: it must be stock Chrome for Windows with the '
+      + 'same major version as the browser CapSkip solves with. Leave userAgent out '
+      + "and CapSkip uses its own browser's, which the result reports.",
+  ],
+  [
+    /ERROR_PROXY_BANNED/,
+    () =>
+      'The site has banned the IP address this solve came from. Nothing sent from '
+      + 'that address can pass: switch to a different proxy, request the page again '
+      + 'and solve the new challenge.',
+  ],
+  [
+    /ERROR_PROXY_CONNECT_REFUSED/,
+    () => 'The target could not be reached through the proxy. Check the proxy works, or use another.',
+  ],
+  [
+    /ERROR_PROXY_FORMAT/,
+    () => 'CapSkip could not read the proxy. Use host:port or login:password@host:port.',
+  ],
+  [
     /ERROR_BAD_PARAMETERS/,
     () => 'CapSkip rejected the parameters for this captcha type. Re-check the values supplied.',
   ],

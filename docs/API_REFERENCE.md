@@ -1,6 +1,6 @@
 # CapSkip MCP Server — API Reference
 
-Complete reference for all ten tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
+Complete reference for all eleven tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
 
 Every solve tool declares an `outputSchema` and returns MCP `structuredContent` matching it, plus a human-readable text block for clients that do not render structured output. Every tool schema rejects unknown keys — a misspelled or unsupported parameter is rejected by name rather than silently ignored.
 
@@ -20,6 +20,7 @@ Every solve tool declares an `outputSchema` and returns MCP `structuredContent` 
 | `capskip_solve_captchafox` | Solve a CaptchaFox challenge | Yes |
 | `capskip_solve_friendly_captcha` | Solve a Friendly Captcha proof-of-work challenge | Yes |
 | `capskip_solve_amazon_waf` | Solve an AWS WAF (Amazon WAF) CAPTCHA | Yes |
+| `capskip_solve_datadome` | Pass a DataDome challenge and get its cookie | Yes |
 
 ---
 
@@ -675,6 +676,83 @@ Content-Type: text/plain;charset=UTF-8
 
 The response is a JSON object whose `token` field is the `aws-waf-token`. It stays valid for the site's immunity time, five minutes by default; when the challenge comes back, solve again.
 
+
+---
+
+## `capskip_solve_datadome`
+
+Pass a DataDome challenge — the block page (HTTP 403, sometimes 401) a DataDome-protected site returns instead of its content, with a slider (`/captcha/`) or a device check (`/interstitial/`) loaded from geo.captcha-delivery.com — and get the `datadome` cookie. Requires `captcha_url` and `url`. IMPORTANT: the cookie belongs to ONE IP address and ONE User-Agent. Repeat the request with the returned `cookie` as the Cookie header, the returned `userAgent` as the User-Agent, and from the same IP: through the proxy you passed, or — when the result carries `proxy` — through that proxy, which CapSkip picked from its own DataDome proxy list because you passed none.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `captcha_url` | string | Yes | — | "The address of the DataDome challenge iframe on geo.captcha-delivery.com: /captcha/ for a slider, /interstitial/ for a device check." Take the iframe's `src`, or build it from the block page's `var dd` object (see below). |
+| `url` | string (URL) | Yes | — | "Full URL of the page that returned the DataDome block page." |
+| `userAgent` | string | No | CapSkip's browser's | "The User-Agent the cookie will be used with. It must be stock Chrome for Windows with the same major version as the browser CapSkip solves with." Usually leave it out. |
+| `proxy` | object | No | — | "The proxy the requests carrying the cookie will go through." |
+| `timeout` | integer | No | `CAPSKIP_RECAPTCHA_TIMEOUT` (300) | "Seconds to wait before giving up. Maximum 600." |
+
+`proxy` has the same `{ type, uri }` shape documented under `capskip_solve_recaptcha` above.
+
+Refused before anything reaches CapSkip: a `captcha_url` that is not https on captcha-delivery.com under `/captcha/` or `/interstitial/` carrying `initialCid`, `hash` and `cid`; a block page with `t=bv`, which means the requesting address is banned (change it and fetch the page again); a `url` on captcha-delivery.com; and a `userAgent` that is not stock Chrome for Windows. CapSkip itself refuses a different Chrome major version with `ERROR_WRONG_USERAGENT`.
+
+### Building `captcha_url`
+
+Most block pages build the iframe with a script from a `var dd={...}` object. Take the path from `rt` (`i` → `/interstitial/`, otherwise `/captcha/`) and the query from the other fields, every value URL-encoded:
+
+| Query parameter | Value |
+|---|---|
+| `initialCid` | `dd.cid` |
+| `hash` | `dd.hsh` |
+| `cid` | `dd.cookie` |
+| `t` | `dd.t`, when present |
+| `referer` | the page URL you requested |
+| `s` | `dd.s` |
+| `e` | `dd.e`, when present |
+| `b` | `dd.b`, when present |
+| `dm` | always `cd` |
+
+The host is `dd.host`, or `geo.captcha-delivery.com`. Each block page is a fresh challenge: solve it soon, and fetch the page again for the next one.
+
+### The proxy CapSkip picks
+
+The CapSkip app can hold a DataDome proxy list of its own (Settings, Captcha types, DataDome, Configure Proxies). A solve sent without `proxy` goes through that list when it has entries, and the result then names the proxy as `host:port`, without its login. The cookie works only from that address, so send the follow-up request through it. A `proxy` passed with the solve always takes priority, and then no `proxy` comes back.
+
+### Output shape
+
+| Field | Type | Always present | Description |
+|---|---|---|---|
+| `captchaId` | string | yes | CapSkip's internal id for this solve |
+| `code` | string | yes | The cookie exactly as DataDome set it, attributes included |
+| `solveSeconds` | number | yes | Wall-clock time the solve took |
+| `cookie` | string | yes | The `datadome=...` pair alone, for a Cookie header |
+| `userAgent` | string | when reported | The User-Agent the cookie was earned with |
+| `proxy` | string | only when CapSkip chose it | The DataDome-list proxy the solve went through, `host:port` |
+
+### Example
+
+Request:
+
+```json
+{
+  "captcha_url": "https://geo.captcha-delivery.com/captcha/?initialCid=AHrlqAAAAAMA7KBvCr0n4cEAG330MA%3D%3D&hash=D013AA612AB2224D03B2318D0F5B19&cid=KzE6_pZBBTHdCdvZkauT9VAshi0wS7~v5_M_MacEtdw8&t=fe&referer=https%3A%2F%2Fwww.example.com%2F&s=45225&e=549255a0289eaf17af60822309ab8db4&dm=cd",
+  "url": "https://www.example.com/"
+}
+```
+
+Response (`structuredContent`):
+
+```json
+{
+  "captchaId": "10572",
+  "code": "datadome=FAPPpli4jkT1MZGtgF8ez7mjSz8MrJ9fGRNE51Gj79cq9fXp5xn~F1P5APWjqvJojf4U9dq0R81Xaj2hpYtjle95mkg; Max-Age=31536000; Domain=.example.com; Path=/; Secure; SameSite=Lax",
+  "solveSeconds": 8.42,
+  "cookie": "datadome=FAPPpli4jkT1MZGtgF8ez7mjSz8MrJ9fGRNE51Gj79cq9fXp5xn~F1P5APWjqvJojf4U9dq0R81Xaj2hpYtjle95mkg",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+  "proxy": "203.0.113.10:8080"
+}
+```
 ---
 
 ## Validation errors

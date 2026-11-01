@@ -10,6 +10,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Nothing yet. Add entries here as changes land; they move into a version
 section at release time.
 
+## [1.4.0] - 2026-11-02
+
+### Added
+
+- **`capskip_solve_datadome`** — pass a DataDome challenge, the slider
+  (`/captcha/`) or the device check (`/interstitial/`) on a DataDome block page,
+  and get the `datadome` cookie. Requires `captcha_url` and `url`; optional
+  `userAgent` and `proxy`. The result carries `cookie` (the `datadome=...` pair
+  for a Cookie header), `code` (the full Set-Cookie value), `userAgent` (the one
+  the cookie was earned with) and, when no proxy was passed and the CapSkip app
+  solved through its own DataDome proxy list, `proxy` as `host:port`. The text
+  reply spells out the Cookie header, the User-Agent and which address to send
+  from, because the cookie works for one IP and one User-Agent only.
+- Output schema `dataDomeOutput`.
+- Error guidance for `ERROR_WRONG_USERAGENT`, `ERROR_PROXY_BANNED`,
+  `ERROR_PROXY_CONNECT_REFUSED` and `ERROR_PROXY_FORMAT`.
+
+### Changed
+
+- Requires `capskip` (the Node SDK) `^1.5.0`, which is where `dataDome()` lives.
+- The server's instructions now list DataDome among the types it can solve.
+
+### Notes
+
+- DataDome uses `CAPSKIP_RECAPTCHA_TIMEOUT`: the challenge is passed in a real
+  browser.
+
 ## [1.3.0] - 2026-11-01
 
 ### Added

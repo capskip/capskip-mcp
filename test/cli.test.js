@@ -24,6 +24,7 @@ test('the built entrypoint serves tools over stdio', async () => {
       'capskip_solve_amazon_waf',
       'capskip_solve_captchafox',
       'capskip_solve_capy',
+      'capskip_solve_datadome',
       'capskip_solve_friendly_captcha',
       'capskip_solve_geetest',
       'capskip_solve_image_captcha',

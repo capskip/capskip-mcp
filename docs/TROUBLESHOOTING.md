@@ -212,7 +212,7 @@ If the site loads GeeTest from a non-default domain, pass it through as `api_ser
 
 **Symptom:** `capskip_solve_recaptcha` is called on a widget that has a `data-sitekey`, and every attempt fails, times out, or returns a token the site rejects.
 
-**Cause:** The captcha is not a reCAPTCHA. CapSkip supports exactly nine types — image captchas, reCAPTCHA v2/v3, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, and AWS WAF. It **cannot** solve hCaptcha or FunCaptcha/Arkose, and there is no tool for them.
+**Cause:** The captcha is not a reCAPTCHA. CapSkip supports exactly ten types — image captchas, reCAPTCHA v2/v3, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, AWS WAF, and DataDome. It **cannot** solve hCaptcha or FunCaptcha/Arkose, and there is no tool for them.
 
 hCaptcha is easy to misidentify because it also carries a `data-sitekey`:
 

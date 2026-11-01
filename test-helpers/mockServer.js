@@ -92,6 +92,16 @@ const AMAZON_WAF_SOLUTION = {
   existing_token: '7d4c2a91-EXAMPLE-4f0b-9e6d-3a1b5c8e2f70:EQoAeXAMPLEtokenAAAA:Wm9wc2E=',
 };
 
+// DataDome answers with a cookie, exactly as DataDome set it. Next to it CapSkip
+// names the User-Agent it was earned with (the caller's, else its browser's) and,
+// only when the task sent no proxy and the app's DataDome list supplied one, that
+// proxy as host:port.
+const DATADOME_COOKIE = 'datadome=FAPPpli4jkT1MZGtgF8ez7mjSz8MrJ9fGRNE51Gj79cq9fXp5xn~F1P5APWjqvJojf4U9dq0R81Xaj2hpYtjle95mkg; '
+  + 'Max-Age=31536000; Domain=.example.com; Path=/; Secure; SameSite=Lax';
+const DATADOME_BROWSER_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+  + '(KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36';
+const DATADOME_LIST_PROXY = '203.0.113.10:8080';
+
 const ALTCHA_TOKEN = 'eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiM2RkMjgyNTNiZTZjYzBjNTRkOTVmN2Y5OGM1MTdlNjgiLCJudW1iZXIiOjk2NjEsInNhbHQiOiI0NmQ1YjFjODg3MWU1MTUyZDkwMmVlM2Y/ZXhwaXJlcz0xODkzNDU2MDAwIiwic2lnbmF0dXJlIjoiNGIxY2YwZTBiZTBmNGU1MjQ3ZTUwYjBmOWE0NDk4MzAiLCJ0b29rIjoxNi41OH0=';
 
 // The other ALTCHA generation. A proof-of-work v2 answer has no top-level
@@ -118,6 +128,7 @@ function send(res, text, ctype = 'text/plain') {
 function createMockServer() {
   let ids = 0;
   const idType = {};
+  const idFields = {};
   const pollCount = {};
 
   const handleRes = (res, query) => {
@@ -171,6 +182,19 @@ function createMockServer() {
         }), 'application/json');
       } else {
         send(res, `OK|${ALTCHA_TOKEN}`);
+      }
+    } else if (idType[cid] === 'datadome') {
+      const sent = idFields[cid] || {};
+      const userAgent = sent.userAgent || sent.useragent || DATADOME_BROWSER_USER_AGENT;
+      if (wantJson) {
+        send(res, JSON.stringify({
+          status: 1,
+          request: DATADOME_COOKIE,
+          userAgent,
+          ...(sent.proxy ? {} : { proxy: DATADOME_LIST_PROXY }),
+        }), 'application/json');
+      } else {
+        send(res, `OK|${DATADOME_COOKIE}`);
       }
     } else if (idType[cid] === 'amazon_waf') {
       if (wantJson) {
@@ -270,6 +294,7 @@ function createMockServer() {
       cid = String(ids);
     }
     idType[cid] = fields.method || '';
+    idFields[cid] = fields;
     // in.php returns JSON when the submit carried json=1, mirroring real CapSkip.
     if (String(fields.json) === '1') {
       send(res, `{"status":1,"request":"${cid}"}`, 'application/json');
@@ -329,6 +354,9 @@ module.exports = {
   ALTCHA_TOKEN,
   CAPY_SOLUTION,
   AMAZON_WAF_SOLUTION,
+  DATADOME_COOKIE,
+  DATADOME_BROWSER_USER_AGENT,
+  DATADOME_LIST_PROXY,
   CAPTCHAFOX_TOKEN,
   CAPTCHAFOX_USER_AGENT,
   FRIENDLY_CAPTCHA_TOKEN,
