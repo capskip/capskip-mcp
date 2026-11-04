@@ -9,13 +9,14 @@ import { registerCaptchaFoxTool } from './tools/captchafox.js';
 import { registerCapyTool } from './tools/capy.js';
 import { registerFriendlyCaptchaTool } from './tools/friendlycaptcha.js';
 import { registerGeetestTool } from './tools/geetest.js';
+import { registerHCaptchaTool } from './tools/hcaptcha.js';
 import { registerImageTool } from './tools/image.js';
 import { registerRecaptchaTool } from './tools/recaptcha.js';
 import { registerStatusTool } from './tools/status.js';
 import { registerTurnstileTool } from './tools/turnstile.js';
 
 export const SERVER_NAME = 'capskip';
-export const SERVER_VERSION = '1.4.0';
+export const SERVER_VERSION = '1.5.0';
 
 /** Build a fully-registered MCP server. Does not connect a transport. */
 export function createServer(config: CapSkipConfig): McpServer {
@@ -28,10 +29,12 @@ export function createServer(config: CapSkipConfig): McpServer {
         + 'from the page, call the matching tool, then place the returned token in '
         + "the page's response field. CapSkip solves image captchas, reCAPTCHA v2 "
         + 'and v3, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, '
-        + 'Friendly Captcha, AWS WAF (Amazon WAF) and DataDome — it cannot solve hCaptcha '
-        + 'or FunCaptcha/Arkose, so do not call these tools for those. An hCaptcha '
-        + 'widget renders as <div class="h-captcha" data-sitekey="…">, which is '
-        + 'easy to mistake for reCAPTCHA when scanning the DOM for data-sitekey. '
+        + 'Friendly Captcha, AWS WAF (Amazon WAF), DataDome and hCaptcha — it cannot '
+        + 'solve FunCaptcha/Arkose, so do not call these tools for that. hCaptcha and '
+        + 'reCAPTCHA both carry a data-sitekey: a widget rendered as '
+        + '<div class="h-captcha" data-sitekey="…"> or loaded from js.hcaptcha.com is '
+        + 'hCaptcha and takes capskip_solve_hcaptcha, while class="g-recaptcha" takes '
+        + 'capskip_solve_recaptcha. '
         + 'If a solve fails unexpectedly, call capskip_status to check CapSkip is '
         + 'running.',
     },
@@ -50,6 +53,7 @@ export function createServer(config: CapSkipConfig): McpServer {
   registerFriendlyCaptchaTool(server, ctx);
   registerAmazonWafTool(server, ctx);
   registerDataDomeTool(server, ctx);
+  registerHCaptchaTool(server, ctx);
 
   return server;
 }

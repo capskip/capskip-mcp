@@ -10,6 +10,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Nothing yet. Add entries here as changes land; they move into a version
 section at release time.
 
+## [1.5.0] - 2026-11-05
+
+### Added
+
+- **`capskip_solve_hcaptcha`** — solve an hCaptcha widget and get its token.
+  Checkbox, invisible and hCaptcha Enterprise widgets all use this one tool.
+  Requires `sitekey` and `url`; optional `invisible`, `data` (the Enterprise
+  `rqdata`), `userAgent` and `proxy`. The result carries `token` (also as
+  `code`), `respKey` (always present, empty when the widget handed out none) and
+  `userAgent`, the one the token was earned with. The text reply names both form
+  fields, `h-captcha-response` and `g-recaptcha-response`, the `data-callback`
+  alternative, the User-Agent to submit with and the two-minute expiry.
+- Output schema `hCaptchaOutput`.
+- Error guidance for `ERROR_RECAPTCHA_INVALID_SITEKEY`.
+
+### Changed
+
+- Requires `capskip` (the Node SDK) `^1.6.0`, which is where `hcaptcha()` lives.
+- The server's instructions now list hCaptcha among the types it can solve and
+  tell it apart from reCAPTCHA (`class="h-captcha"` / `js.hcaptcha.com` versus
+  `class="g-recaptcha"`), instead of ruling it out.
+
+### Notes
+
+- hCaptcha uses `CAPSKIP_RECAPTCHA_TIMEOUT`: the widget is passed in a real
+  browser.
+
 ## [1.4.0] - 2026-11-02
 
 ### Added

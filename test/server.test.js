@@ -18,6 +18,7 @@ const SOLVE_TOOLS = [
   'capskip_solve_friendly_captcha',
   'capskip_solve_amazon_waf',
   'capskip_solve_datadome',
+  'capskip_solve_hcaptcha',
 ];
 
 test('the advertised version matches package.json', async () => {
@@ -64,7 +65,7 @@ test('capskip_status is annotated read-only', async () => {
   }
 });
 
-test('the instructions name the supported types and rule out hCaptcha', async () => {
+test('the instructions name the supported types and tell hCaptcha from reCAPTCHA', async () => {
   // hCaptcha renders as <div class="h-captcha" data-sitekey="…">. A model
   // scanning the DOM for data-sitekey cannot tell it from reCAPTCHA, so without
   // this it reaches for capskip_solve_recaptcha, burns a solve, and loops.
@@ -72,6 +73,9 @@ test('the instructions name the supported types and rule out hCaptcha', async ()
   try {
     const instructions = client.getInstructions();
     assert.match(instructions, /hCaptcha/);
+    assert.match(instructions, /h-captcha/);
+    assert.match(instructions, /capskip_solve_hcaptcha/);
+    assert.doesNotMatch(instructions, /cannot solve hCaptcha/i);
     assert.match(instructions, /FunCaptcha|Arkose/);
     assert.match(instructions, /cannot solve/i);
     for (const supported of [/image captcha/i, /reCAPTCHA/, /Turnstile/, /GeeTest/]) {

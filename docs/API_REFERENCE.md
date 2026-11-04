@@ -1,6 +1,6 @@
 # CapSkip MCP Server — API Reference
 
-Complete reference for all eleven tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
+Complete reference for all twelve tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
 
 Every solve tool declares an `outputSchema` and returns MCP `structuredContent` matching it, plus a human-readable text block for clients that do not render structured output. Every tool schema rejects unknown keys — a misspelled or unsupported parameter is rejected by name rather than silently ignored.
 
@@ -21,6 +21,7 @@ Every solve tool declares an `outputSchema` and returns MCP `structuredContent` 
 | `capskip_solve_friendly_captcha` | Solve a Friendly Captcha proof-of-work challenge | Yes |
 | `capskip_solve_amazon_waf` | Solve an AWS WAF (Amazon WAF) CAPTCHA | Yes |
 | `capskip_solve_datadome` | Pass a DataDome challenge and get its cookie | Yes |
+| `capskip_solve_hcaptcha` | Solve an hCaptcha widget (checkbox, invisible, Enterprise) | Yes |
 
 ---
 
@@ -753,6 +754,65 @@ Response (`structuredContent`):
   "proxy": "203.0.113.10:8080"
 }
 ```
+---
+
+## `capskip_solve_hcaptcha`
+
+Solve an hCaptcha widget — `<div class="h-captcha" data-sitekey="…">` or a js.hcaptcha.com script on the page — and get its token. Checkbox, invisible and hCaptcha Enterprise widgets all use this tool. Requires `sitekey` and `url`. Put the returned token in the form's hidden `h-captcha-response` field and in `g-recaptcha-response` if the form has one, or call the widget's `data-callback` with it, then submit with the returned User-Agent. Tokens are single use and expire about two minutes after they are issued.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sitekey` | string | Yes | — | "The sitekey of the hCaptcha widget, a UUID such as 'a5f74b19-9e45-40e0-b45d-47ff91b7a6c2'. Read it from data-sitekey on the widget container, from the sitekey option of hcaptcha.render(), or from the sitekey= parameter in the address of the hCaptcha iframe." |
+| `url` | string (URL) | Yes | — | "Full URL of the page the captcha appears on, including scheme." |
+| `invisible` | boolean | No | `false` | "true for an invisible widget, one rendered with data-size=invisible." |
+| `data` | string | No | — | "hCaptcha Enterprise only: the rqdata value the page passes to the widget through hcaptcha.setData() before it runs. It is issued for one challenge and expires quickly, so read a fresh one for every solve." |
+| `userAgent` | string | No | CapSkip's browser's | "The User-Agent the form will be submitted with. CapSkip uses it only when it matches the browser it solves with, and always reports the one the token was actually earned with." Usually leave it out. |
+| `proxy` | object | No | — | "Solve from this network. hCaptcha scores the address a token comes from as well as the browser." |
+| `timeout` | integer | No | `CAPSKIP_RECAPTCHA_TIMEOUT` (300) | "Seconds to wait before giving up. Maximum 600." |
+
+`proxy` has the same `{ type, uri }` shape documented under `capskip_solve_recaptcha` above.
+
+The CapSkip app can also hold an hCaptcha proxy pool of its own (Settings, Captcha types, hCaptcha, Configure Proxies); a `proxy` passed with the solve always takes priority over it. If a strict site refuses the tokens that came back, turn on High score mode for hCaptcha on the same settings page.
+
+### Output shape
+
+| Field | Type | Always present | Description |
+|---|---|---|---|
+| `captchaId` | string | yes | CapSkip's internal id for this solve |
+| `code` | string | yes | The token |
+| `solveSeconds` | number | yes | Wall-clock time the solve took |
+| `token` | string | yes | The same token, for `h-captcha-response` (and `g-recaptcha-response`) |
+| `respKey` | string | yes | The second value hCaptcha hands the widget; most sites never read it, and it can be empty |
+| `userAgent` | string | when reported | The User-Agent the token was earned with |
+
+### Example
+
+Request:
+
+```json
+{
+  "sitekey": "a5f74b19-9e45-40e0-b45d-47ff91b7a6c2",
+  "url": "https://accounts.hcaptcha.com/demo"
+}
+```
+
+Response (`structuredContent`):
+
+```json
+{
+  "captchaId": "10573",
+  "code": "P1_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.hadwYXNza2V5xQZ2...f3Kq8nV2",
+  "solveSeconds": 24.6,
+  "token": "P1_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.hadwYXNza2V5xQZ2...f3Kq8nV2",
+  "respKey": "E0_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjA0...9wB1",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+}
+```
+
+A sitekey hCaptcha refuses for that page fails with `ERROR_RECAPTCHA_INVALID_SITEKEY`; check the `sitekey`, and that `url` is the page the widget is actually on.
+
 ---
 
 ## Validation errors

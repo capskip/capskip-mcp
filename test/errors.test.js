@@ -77,6 +77,12 @@ test('ERROR_BAD_PARAMETERS points at the supplied values', () => {
   assert.match(text, /Re-check the values/i);
 });
 
+test('ERROR_RECAPTCHA_INVALID_SITEKEY points at the sitekey and the page', () => {
+  const text = textOf(mapError(new ApiException('ERROR_RECAPTCHA_INVALID_SITEKEY'), CTX));
+  assert.match(text, /sitekey/);
+  assert.match(text, /url/);
+});
+
 test('ERROR_WRONG_USERAGENT says which User-Agent CapSkip takes', () => {
   const text = textOf(mapError(new ApiException('ERROR_WRONG_USERAGENT'), CTX));
   assert.match(text, /Chrome for Windows/);

@@ -283,7 +283,7 @@ Do not re-encode, trim or re-order it: the token is base64 of a JSON document wh
 
 ## 10. Using a proxy
 
-Solving through the same IP you will submit from generally improves acceptance for reCAPTCHA, Turnstile, and GeeTest. All three tools accept an optional `proxy` object, as do `capskip_solve_captchafox`, `capskip_solve_friendly_captcha`, `capskip_solve_amazon_waf` and `capskip_solve_datadome`. `capskip_solve_altcha` and `capskip_solve_capy` accept one too — though there it applies only to the challenge fetch (ALTCHA) or the puzzle-image fetch (Capy), never to the solve itself:
+Solving through the same IP you will submit from generally improves acceptance for reCAPTCHA, Turnstile, and GeeTest. All three tools accept an optional `proxy` object, as do `capskip_solve_captchafox`, `capskip_solve_friendly_captcha`, `capskip_solve_amazon_waf`, `capskip_solve_datadome` and `capskip_solve_hcaptcha`. `capskip_solve_altcha` and `capskip_solve_capy` accept one too — though there it applies only to the challenge fetch (ALTCHA) or the puzzle-image fetch (Capy), never to the solve itself:
 
 ```json
 {

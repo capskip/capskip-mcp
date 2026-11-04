@@ -103,6 +103,15 @@ export const dataDomeOutput = baseSolveOutput.extend({
   proxy: z.string().optional(),
 });
 
+export const hCaptchaOutput = baseSolveOutput.extend({
+  /** The token for the form's `h-captcha-response` (and `g-recaptcha-response`) field. */
+  token: z.string(),
+  /** The second value hCaptcha hands the widget. Most sites never read it; it can be empty. */
+  respKey: z.string(),
+  /** The User-Agent the token was earned with. Submit the form with it. */
+  userAgent: z.string().optional(),
+});
+
 export const statusOutput = z.object({
   reachable: z.boolean(),
   host: z.string(),

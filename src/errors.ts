@@ -44,6 +44,12 @@ const API_CODES: Array<[RegExp, (ctx: ErrorContext) => string]> = [
     () => 'CapSkip rejected the sitekey. Re-read data-sitekey from the page and retry.',
   ],
   [
+    /ERROR_RECAPTCHA_INVALID_SITEKEY/,
+    () =>
+      'The sitekey was refused for that page. Re-read data-sitekey from the widget, '
+      + 'and check url is the page the widget is actually on.',
+  ],
+  [
     /ERROR_PAGEURL/,
     () => 'CapSkip rejected the url. Pass the full page URL, including its scheme.',
   ],

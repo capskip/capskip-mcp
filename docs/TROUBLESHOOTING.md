@@ -208,13 +208,13 @@ If the site loads GeeTest from a non-default domain, pass it through as `api_ser
 
 ---
 
-## hCaptcha or FunCaptcha never solves
+## A widget with a data-sitekey never solves
 
 **Symptom:** `capskip_solve_recaptcha` is called on a widget that has a `data-sitekey`, and every attempt fails, times out, or returns a token the site rejects.
 
-**Cause:** The captcha is not a reCAPTCHA. CapSkip supports exactly ten types — image captchas, reCAPTCHA v2/v3, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, AWS WAF, and DataDome. It **cannot** solve hCaptcha or FunCaptcha/Arkose, and there is no tool for them.
+**Cause:** The captcha is not a reCAPTCHA. CapSkip supports exactly eleven types — image captchas, reCAPTCHA v2/v3, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, AWS WAF, DataDome and hCaptcha — each with its own tool. It **cannot** solve FunCaptcha/Arkose, and there is no tool for it.
 
-hCaptcha is easy to misidentify because it also carries a `data-sitekey`:
+hCaptcha is the one most often mistaken for reCAPTCHA, because it also carries a `data-sitekey`:
 
 ```html
 <div class="h-captcha" data-sitekey="10000000-ffff-ffff-ffff-000000000001"></div>
@@ -227,7 +227,7 @@ hCaptcha is easy to misidentify because it also carries a `data-sitekey`:
 | `class="g-recaptcha"`, `www.google.com/recaptcha/` | reCAPTCHA v2/v3 | `capskip_solve_recaptcha` |
 | `class="cf-turnstile"`, `challenges.cloudflare.com` | Turnstile | `capskip_solve_turnstile` |
 | `gt=` / `challenge=` from a GeeTest init call | GeeTest v3 | `capskip_solve_geetest` |
-| `class="h-captcha"`, `js.hcaptcha.com` | hCaptcha | **not supported** |
+| `class="h-captcha"`, `js.hcaptcha.com` | hCaptcha | `capskip_solve_hcaptcha` |
 | `funcaptcha` / `arkoselabs.com` | FunCaptcha/Arkose | **not supported** |
 
 The server tells connected models this in its instructions, but a model can still guess wrong from the DOM alone. Retrying will not help — the type is the problem.

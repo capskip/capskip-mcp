@@ -102,6 +102,13 @@ const DATADOME_BROWSER_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) A
   + '(KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36';
 const DATADOME_LIST_PROXY = '203.0.113.10:8080';
 
+// hCaptcha, as CapSkip's res.php answers it with json=1: the token as `request`,
+// the widget's respKey, and the UA of the browser that earned the token.
+const HCAPTCHA_TOKEN = 'P1_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.hadwYXNza2V5xQZ2f3Kq8nV2';
+const HCAPTCHA_RESP_KEY = 'E0_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjA09wB1';
+const HCAPTCHA_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+  + '(KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36';
+
 const ALTCHA_TOKEN = 'eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiM2RkMjgyNTNiZTZjYzBjNTRkOTVmN2Y5OGM1MTdlNjgiLCJudW1iZXIiOjk2NjEsInNhbHQiOiI0NmQ1YjFjODg3MWU1MTUyZDkwMmVlM2Y/ZXhwaXJlcz0xODkzNDU2MDAwIiwic2lnbmF0dXJlIjoiNGIxY2YwZTBiZTBmNGU1MjQ3ZTUwYjBmOWE0NDk4MzAiLCJ0b29rIjoxNi41OH0=';
 
 // The other ALTCHA generation. A proof-of-work v2 answer has no top-level
@@ -215,6 +222,18 @@ function createMockServer() {
       } else {
         send(res, `OK|${JSON.stringify(CAPY_SOLUTION)}`);
       }
+    } else if (idType[cid] === 'hcaptcha') {
+      // Plain text carries the UA in X-HCaptcha-User-Agent instead.
+      if (wantJson) {
+        send(res, JSON.stringify({
+          status: 1,
+          request: HCAPTCHA_TOKEN,
+          respKey: HCAPTCHA_RESP_KEY,
+          useragent: HCAPTCHA_USER_AGENT,
+        }), 'application/json');
+      } else {
+        send(res, `OK|${HCAPTCHA_TOKEN}`);
+      }
     } else if (idType[cid] === 'captchafox') {
       if (wantJson) {
         send(res, JSON.stringify({
@@ -269,6 +288,14 @@ function createMockServer() {
 
     if (key === 'badkey') {
       send(res, 'ERROR_WRONG_USER_KEY');
+      return;
+    }
+
+    // CapSkip reads hCaptcha's invisible as "1" or "true" only; anything else
+    // would silently mean "visible", so the mock refuses it outright.
+    if (fields.method === 'hcaptcha' && fields.invisible !== undefined
+        && !['1', 'true'].includes(fields.invisible)) {
+      send(res, 'ERROR_BAD_PARAMETERS');
       return;
     }
 
@@ -357,6 +384,9 @@ module.exports = {
   DATADOME_COOKIE,
   DATADOME_BROWSER_USER_AGENT,
   DATADOME_LIST_PROXY,
+  HCAPTCHA_TOKEN,
+  HCAPTCHA_RESP_KEY,
+  HCAPTCHA_USER_AGENT,
   CAPTCHAFOX_TOKEN,
   CAPTCHAFOX_USER_AGENT,
   FRIENDLY_CAPTCHA_TOKEN,
