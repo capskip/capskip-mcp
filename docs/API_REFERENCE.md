@@ -1,6 +1,6 @@
 # CapSkip MCP Server — API Reference
 
-Complete reference for all twelve tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
+Complete reference for all thirteen tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
 
 Every solve tool declares an `outputSchema` and returns MCP `structuredContent` matching it, plus a human-readable text block for clients that do not render structured output. Every tool schema rejects unknown keys — a misspelled or unsupported parameter is rejected by name rather than silently ignored.
 
@@ -22,6 +22,7 @@ Every solve tool declares an `outputSchema` and returns MCP `structuredContent` 
 | `capskip_solve_amazon_waf` | Solve an AWS WAF (Amazon WAF) CAPTCHA | Yes |
 | `capskip_solve_datadome` | Pass a DataDome challenge and get its cookie | Yes |
 | `capskip_solve_hcaptcha` | Solve an hCaptcha widget (checkbox, invisible, Enterprise) | Yes |
+| `capskip_solve_mtcaptcha` | Solve an MTCaptcha text captcha | Yes |
 
 ---
 
@@ -812,6 +813,62 @@ Response (`structuredContent`):
 ```
 
 A sitekey hCaptcha refuses for that page fails with `ERROR_RECAPTCHA_INVALID_SITEKEY`; check the `sitekey`, and that `url` is the page the widget is actually on.
+
+---
+
+## `capskip_solve_mtcaptcha`
+
+Solve an MTCaptcha text captcha — a widget configured by a `mtcaptchaConfig` object, or an iframe from service.mtcaptcha.com — and get its token. Requires `sitekey` (starts with `MTPublic-`) and `url`; pass `action` too when `mtcaptchaConfig` sets one. You do not need to read or type the characters in the picture. Put the returned token, which starts with `v1(`, in the form's hidden `mtcaptcha-verifiedtoken` field, then submit the form.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sitekey` | string | Yes | — | "The MTCaptcha sitekey, which starts with 'MTPublic-' (for example 'MTPublic-KzqLY1cKH'). Read it from the sitekey of the mtcaptchaConfig object in the page source, or from the sitekey= parameter in the address of the widget iframe on service.mtcaptcha.com. Copy it exactly." |
+| `url` | string (URL) | Yes | — | "Full URL of the page the captcha appears on, including scheme." |
+| `action` | string | No | — | "The action value the page sets in its mtcaptchaConfig object, such as 'login'. Leave it out when the page sets none." |
+| `userAgent` | string | No | a Chrome for Windows User-Agent | "The User-Agent to present to MTCaptcha. Usually leave it out." |
+| `proxy` | object | No | — | "Solve from this network. Every solve requests fresh challenges from MTCaptcha's service, so many solves from one address are what its rate limits catch." |
+| `timeout` | integer | No | `CAPSKIP_TIMEOUT` (120) | "Seconds to wait before giving up. Maximum 600." |
+
+`proxy` has the same `{ type, uri }` shape documented under `capskip_solve_recaptcha` above.
+
+The CapSkip app can also hold an MTCaptcha proxy pool of its own (Settings, Captcha types, MTCaptcha, Configure Proxies), which tasks sent without a proxy are spread across; a `proxy` passed with the solve always takes priority over it.
+
+The SDK checks the sitekey before anything is sent: it must be `MTPublic-` followed by letters, digits, `-` or `_` (64 characters at most). A key copied as `sk=MTPublic-...` from the widget's own `getchallenge` request is accepted.
+
+### Output shape
+
+| Field | Type | Always present | Description |
+|---|---|---|---|
+| `captchaId` | string | yes | CapSkip's internal id for this solve |
+| `code` | string | yes | The token |
+| `solveSeconds` | number | yes | Wall-clock time the solve took |
+| `token` | string | yes | The same token, for `mtcaptcha-verifiedtoken` |
+
+### Example
+
+Request:
+
+```json
+{
+  "sitekey": "MTPublic-KzqLY1cKH",
+  "url": "https://2captcha.com/demo/mtcaptcha"
+}
+```
+
+Response (`structuredContent`):
+
+```json
+{
+  "captchaId": "10574",
+  "code": "v1(0f3c9e2a,7b1d4c88,MTPublic-KzqLY1cKH,5e0c2a9f61d84b37a0c1e9b2d6f4a873,Qm9ndXNU...ZWZHaA**)",
+  "solveSeconds": 3.8,
+  "token": "v1(0f3c9e2a,7b1d4c88,MTPublic-KzqLY1cKH,5e0c2a9f61d84b37a0c1e9b2d6f4a873,Qm9ndXNU...ZWZHaA**)"
+}
+```
+
+A sitekey MTCaptcha does not recognise fails with `ERROR_RECAPTCHA_INVALID_SITEKEY`, and one that is not allowed on the domain of `url` with `ERROR_RECAPTCHA_INVALID_DOMAIN`; check the `sitekey`, and that `url` is the page the widget is actually on.
 
 ---
 

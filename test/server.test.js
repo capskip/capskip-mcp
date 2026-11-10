@@ -19,6 +19,7 @@ const SOLVE_TOOLS = [
   'capskip_solve_amazon_waf',
   'capskip_solve_datadome',
   'capskip_solve_hcaptcha',
+  'capskip_solve_mtcaptcha',
 ];
 
 test('the advertised version matches package.json', async () => {
@@ -76,6 +77,8 @@ test('the instructions name the supported types and tell hCaptcha from reCAPTCHA
     assert.match(instructions, /h-captcha/);
     assert.match(instructions, /capskip_solve_hcaptcha/);
     assert.doesNotMatch(instructions, /cannot solve hCaptcha/i);
+    assert.match(instructions, /MTCaptcha/);
+    assert.match(instructions, /capskip_solve_mtcaptcha/);
     assert.match(instructions, /FunCaptcha|Arkose/);
     assert.match(instructions, /cannot solve/i);
     for (const supported of [/image captcha/i, /reCAPTCHA/, /Turnstile/, /GeeTest/]) {

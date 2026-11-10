@@ -16,7 +16,7 @@ This guide walks you through installing CapSkip, adding `capskip-mcp` to your MC
 
 ## Step 1 — Install and configure CapSkip
 
-1. Download CapSkip from [capskip.com](https://capskip.com).
+1. Download CapSkip from the [download page](https://capskip.com/download-capskip/).
 2. Install and launch the application. Leave it running in the background — `capskip-mcp` talks to it over `localhost`, so it must be running whenever a tool is called.
 3. Open **Settings** and note:
    - **Port** — default is `8080`

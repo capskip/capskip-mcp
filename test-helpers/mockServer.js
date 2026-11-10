@@ -109,6 +109,10 @@ const HCAPTCHA_RESP_KEY = 'E0_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjA09
 const HCAPTCHA_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
   + '(KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36';
 
+// MTCaptcha, as CapSkip's res.php answers it: the verified token and nothing else.
+const MTCAPTCHA_TOKEN = 'v1(0f3c9e2a,7b1d4c88,MTPublic-KzqLY1cKH,5e0c2a9f61d84b37a0c1e9b2d6f4a873,'
+  + 'Qm9ndXNUb2tlbkZvclRlc3RzT25seV9fTm90QVJlYWxNVENhcHRjaGFUb2tlbi1BYkNkRWZHaA**)';
+
 const ALTCHA_TOKEN = 'eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiM2RkMjgyNTNiZTZjYzBjNTRkOTVmN2Y5OGM1MTdlNjgiLCJudW1iZXIiOjk2NjEsInNhbHQiOiI0NmQ1YjFjODg3MWU1MTUyZDkwMmVlM2Y/ZXhwaXJlcz0xODkzNDU2MDAwIiwic2lnbmF0dXJlIjoiNGIxY2YwZTBiZTBmNGU1MjQ3ZTUwYjBmOWE0NDk4MzAiLCJ0b29rIjoxNi41OH0=';
 
 // The other ALTCHA generation. A proof-of-work v2 answer has no top-level
@@ -234,6 +238,12 @@ function createMockServer() {
       } else {
         send(res, `OK|${HCAPTCHA_TOKEN}`);
       }
+    } else if (idType[cid] === 'mt_captcha' || idType[cid] === 'mtcaptcha') {
+      if (wantJson) {
+        send(res, JSON.stringify({ status: 1, request: MTCAPTCHA_TOKEN }), 'application/json');
+      } else {
+        send(res, `OK|${MTCAPTCHA_TOKEN}`);
+      }
     } else if (idType[cid] === 'captchafox') {
       if (wantJson) {
         send(res, JSON.stringify({
@@ -295,6 +305,14 @@ function createMockServer() {
     // would silently mean "visible", so the mock refuses it outright.
     if (fields.method === 'hcaptcha' && fields.invisible !== undefined
         && !['1', 'true'].includes(fields.invisible)) {
+      send(res, 'ERROR_BAD_PARAMETERS');
+      return;
+    }
+
+    // CapSkip's own MTCaptcha sitekey test. The SDK refuses a bad key first, so
+    // reaching here with one means local validation slipped.
+    if ((fields.method === 'mt_captcha' || fields.method === 'mtcaptcha')
+        && !/^MTPublic-[A-Za-z0-9_-]{1,55}$/.test(fields.sitekey || '')) {
       send(res, 'ERROR_BAD_PARAMETERS');
       return;
     }
@@ -385,6 +403,7 @@ module.exports = {
   DATADOME_BROWSER_USER_AGENT,
   DATADOME_LIST_PROXY,
   HCAPTCHA_TOKEN,
+  MTCAPTCHA_TOKEN,
   HCAPTCHA_RESP_KEY,
   HCAPTCHA_USER_AGENT,
   CAPTCHAFOX_TOKEN,

@@ -50,6 +50,12 @@ const API_CODES: Array<[RegExp, (ctx: ErrorContext) => string]> = [
       + 'and check url is the page the widget is actually on.',
   ],
   [
+    /ERROR_RECAPTCHA_INVALID_DOMAIN/,
+    () =>
+      'The sitekey is not allowed on the domain of url. Pass the address of the page '
+      + 'the widget is actually on.',
+  ],
+  [
     /ERROR_PAGEURL/,
     () => 'CapSkip rejected the url. Pass the full page URL, including its scheme.',
   ],

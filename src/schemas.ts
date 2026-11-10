@@ -112,6 +112,11 @@ export const hCaptchaOutput = baseSolveOutput.extend({
   userAgent: z.string().optional(),
 });
 
+export const mtCaptchaOutput = baseSolveOutput.extend({
+  /** The token, v1(...), for the form's hidden `mtcaptcha-verifiedtoken` field. */
+  token: z.string(),
+});
+
 export const statusOutput = z.object({
   reachable: z.boolean(),
   host: z.string(),

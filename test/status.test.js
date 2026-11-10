@@ -6,7 +6,7 @@ const http = require('node:http');
 
 const { startHarness } = require('../test-helpers/harness.js');
 
-test('all twelve tools are advertised with the capskip_ prefix', async () => {
+test('all thirteen tools are advertised with the capskip_ prefix', async () => {
   const { client, close } = await startHarness();
   try {
     const names = (await client.listTools()).tools.map((t) => t.name).sort();
@@ -20,6 +20,7 @@ test('all twelve tools are advertised with the capskip_ prefix', async () => {
       'capskip_solve_geetest',
       'capskip_solve_hcaptcha',
       'capskip_solve_image_captcha',
+      'capskip_solve_mtcaptcha',
       'capskip_solve_recaptcha',
       'capskip_solve_turnstile',
       'capskip_status',

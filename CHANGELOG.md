@@ -10,6 +10,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Nothing yet. Add entries here as changes land; they move into a version
 section at release time.
 
+## [1.6.0] - 2026-11-10
+
+### Added
+
+- **`capskip_solve_mtcaptcha`** — solve an MTCaptcha text captcha and get its
+  token. Requires `sitekey` (starts with `MTPublic-`) and `url`; optional
+  `action` (the action the page's `mtcaptchaConfig` sets), `userAgent` and
+  `proxy`. The result carries `token` (also as `code`), `v1(...)`, and the text
+  reply names the form field it goes in, `mtcaptcha-verifiedtoken`. A proxy's
+  login is never echoed back.
+- Output schema `mtCaptchaOutput`.
+- Error guidance for `ERROR_RECAPTCHA_INVALID_DOMAIN`.
+
+### Changed
+
+- Requires `capskip` (the Node SDK) `^1.7.0`, which is where `mtcaptcha()` lives.
+- The server's instructions name MTCaptcha and steer it to
+  `capskip_solve_mtcaptcha` rather than the image captcha tool.
+- Download links now point to <https://capskip.com/download-capskip/>.
+
+### Notes
+
+- The tool takes `CAPSKIP_TIMEOUT`: no browser runs for the solve.
+
 ## [1.5.0] - 2026-11-05
 
 ### Added
