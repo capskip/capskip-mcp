@@ -1,6 +1,6 @@
 # CapSkip MCP Server — API Reference
 
-Complete reference for all thirteen tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
+Complete reference for all fifteen tools `capskip-mcp` registers. Parameter descriptions below are copied verbatim from each tool's schema in `src/tools/` so this document cannot drift from what a client actually sees when it lists tools.
 
 Every solve tool declares an `outputSchema` and returns MCP `structuredContent` matching it, plus a human-readable text block for clients that do not render structured output. Every tool schema rejects unknown keys — a misspelled or unsupported parameter is rejected by name rather than silently ignored.
 
@@ -23,6 +23,8 @@ Every solve tool declares an `outputSchema` and returns MCP `structuredContent` 
 | `capskip_solve_datadome` | Pass a DataDome challenge and get its cookie | Yes |
 | `capskip_solve_hcaptcha` | Solve an hCaptcha widget (checkbox, invisible, Enterprise) | Yes |
 | `capskip_solve_mtcaptcha` | Solve an MTCaptcha text captcha | Yes |
+| `capskip_solve_geetest_v4` | Solve a GeeTest v4 captcha | Yes |
+| `capskip_solve_yandex_smart` | Solve a Yandex SmartCaptcha | Yes |
 
 ---
 
@@ -869,6 +871,121 @@ Response (`structuredContent`):
 ```
 
 A sitekey MTCaptcha does not recognise fails with `ERROR_RECAPTCHA_INVALID_SITEKEY`, and one that is not allowed on the domain of `url` with `ERROR_RECAPTCHA_INVALID_DOMAIN`; check the `sitekey`, and that `url` is the page the widget is actually on.
+
+---
+
+## `capskip_solve_geetest_v4`
+
+Solve a GeeTest v4 captcha (a page loading static.geetest.com/v4/gt4.js and calling initGeetest4) and get the five values the site verifies: `captcha_id`, `lot_number`, `pass_token`, `gen_time` and `captcha_output`. Requires `captcha_id` and `url` only; unlike GeeTest v3 there is no challenge to fetch first. Every v4 challenge type is answered (slide, icon, nine-grid, match and the rest). Send the five values under those same names in the request the page's own submit makes. For GeeTest v3 (gt + challenge) use `capskip_solve_geetest` instead.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `captcha_id` | string | Yes | — | "The GeeTest v4 captcha_id: 32 hex characters, the same for every visitor. The page loads static.geetest.com/v4/gt4.js and passes it to initGeetest4 as captchaId; if the call is built at runtime, it is the captcha_id parameter of the request to gcaptcha4.geetest.com/load." |
+| `url` | string (URL) | Yes | — | "Full URL of the page the captcha appears on, including scheme." |
+| `risk_type` | string | No | — | "Challenge type to ask GeeTest for: 'slide', 'icon', 'nine', 'word', 'phrase', 'match', 'winlinze', 'svg_seed', 'svg_icon' or 'ai'. GeeTest applies it only where the site allows it. Usually leave it out: the site's own choice wins and every type is solved." |
+| `proxy` | object | No | — | "Solve through this proxy so the answer is produced from its IP." |
+| `timeout` | integer | No | `CAPSKIP_RECAPTCHA_TIMEOUT` (300) | "Seconds to wait before giving up. Maximum 600." |
+
+`proxy` has the same `{ type, uri }` shape documented under `capskip_solve_recaptcha` above. The CapSkip app's GeeTest proxy pool (Settings, Captcha types, GeeTest, Configure Proxies) serves v3 and v4 alike; a `proxy` passed with the solve always takes priority over it.
+
+### Output shape
+
+| Field | Type | Always present | Description |
+|---|---|---|---|
+| `captchaId` | string | yes | CapSkip's internal id for this solve |
+| `code` | string | yes | The raw answer: the five values as a JSON string |
+| `solveSeconds` | number | yes | Wall-clock time the solve took |
+| `captcha_id` | string | when parsed | The widget's captcha_id |
+| `lot_number` | string | when parsed | |
+| `pass_token` | string | when parsed | |
+| `gen_time` | string | when parsed | |
+| `captcha_output` | string | when parsed | |
+| `isOffline` | boolean | no | `true` only when GeeTest could not be reached and passed the widget in offline mode; the site decides whether to accept that |
+
+### Example
+
+Request:
+
+```json
+{
+  "captcha_id": "54088bb07d2df3c46b79f80300b0abbe",
+  "url": "https://gt4.geetest.com/"
+}
+```
+
+Response (`structuredContent`):
+
+```json
+{
+  "captchaId": "10575",
+  "code": "{\"captcha_id\":\"54088bb07d2df3c46b79f80300b0abbe\",\"lot_number\":\"7c1a4f0e...\",...}",
+  "solveSeconds": 8.1,
+  "captcha_id": "54088bb07d2df3c46b79f80300b0abbe",
+  "lot_number": "7c1a4f0e9b2d48a6b3e5f7d9c1a3b5e7",
+  "pass_token": "2f6c0e4a8b1d5f9e3c7a0b4d8e2f6a1c...",
+  "gen_time": "1793001600",
+  "captcha_output": "TM-rSt-9GZ_6s_5-dyAo3ZzQx..."
+}
+```
+
+A missing `captcha_id` is refused before anything is sent. A task GeeTest cannot pass fails with `ERROR_CAPTCHA_UNSOLVABLE`; solve again.
+
+---
+
+## `capskip_solve_yandex_smart`
+
+Solve a Yandex SmartCaptcha (a widget loaded from smartcaptcha.yandexcloud.net, usually a `<div class="smart-captcha" data-sitekey="ysc1_...">`) and get its token. Requires `sitekey` and `url`. You do not need to tick the checkbox or answer the challenges it shows; CapSkip returns only the finished token. Put the token in the form's hidden `smart-token` field, then submit the form. A token is valid for five minutes and can be checked once.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sitekey` | string | Yes | — | "The SmartCaptcha sitekey, usually starting with 'ysc1_'. Read it from the data-sitekey of the <div class=\"smart-captcha\"> container, from the sitekey the page passes to window.smartCaptcha.render, or from the sitekey= parameter in the address of the widget iframe on smartcaptcha.yandexcloud.net. Copy it exactly." |
+| `url` | string (URL) | Yes | — | "Full URL of the page the captcha appears on, including scheme." |
+| `userAgent` | string | No | a current Chrome User-Agent | "The User-Agent to present to Yandex. Usually leave it out." |
+| `proxy` | object | No | — | "Solve from this network. Yandex scores the network every check comes from, so many solves from one address are what makes it ask for harder challenges." |
+| `timeout` | integer | No | `CAPSKIP_RECAPTCHA_TIMEOUT` (300) | "Seconds to wait before giving up. Maximum 600." |
+
+`proxy` has the same `{ type, uri }` shape documented under `capskip_solve_recaptcha` above.
+
+The CapSkip app can also hold a Yandex SmartCaptcha proxy pool of its own (Settings, Captcha types, Yandex SmartCaptcha, Configure Proxies), which tasks sent without a proxy are spread across; a `proxy` passed with the solve always takes priority over it.
+
+The SDK checks the sitekey before anything is sent: it must be 16 to 120 letters, digits, `_` or `-`.
+
+### Output shape
+
+| Field | Type | Always present | Description |
+|---|---|---|---|
+| `captchaId` | string | yes | CapSkip's internal id for this solve |
+| `code` | string | yes | The token |
+| `solveSeconds` | number | yes | Wall-clock time the solve took |
+| `token` | string | yes | The same token, for `smart-token` |
+
+### Example
+
+Request:
+
+```json
+{
+  "sitekey": "ysc1_DAo8nFPdNCMHkAwYxIUJFxW5IIJd99BBfeeeee",
+  "url": "https://smartcaptcha.yandexcloud.net/demo"
+}
+```
+
+Response (`structuredContent`):
+
+```json
+{
+  "captchaId": "10576",
+  "code": "dD0xNzk0NDE5NTg3O2k9MjAzLjAuMTEzLjI1O0Q9QjQ1RjJBN0MxRTkwRDM2ODU0QzA1M0M3...",
+  "solveSeconds": 24.6,
+  "token": "dD0xNzk0NDE5NTg3O2k9MjAzLjAuMTEzLjI1O0Q9QjQ1RjJBN0MxRTkwRDM2ODU0QzA1M0M3..."
+}
+```
+
+A sitekey Yandex does not accept fails with `ERROR_RECAPTCHA_INVALID_SITEKEY`, one that is not allowed on the domain of `url` with `ERROR_RECAPTCHA_INVALID_DOMAIN`, and a solve that could not reach Yandex through the proxy with `ERROR_PROXY_CONNECT_REFUSED`; resubmitting the same task would fail again.
 
 ---
 

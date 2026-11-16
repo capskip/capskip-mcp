@@ -48,6 +48,17 @@ export const geetestOutput = baseSolveOutput.extend({
   seccode: z.string().optional(),
 });
 
+export const geetestV4Output = baseSolveOutput.extend({
+  /** The five values the site verifies with GeeTest, under these same names. */
+  captcha_id: z.string().optional(),
+  lot_number: z.string().optional(),
+  pass_token: z.string().optional(),
+  gen_time: z.string().optional(),
+  captcha_output: z.string().optional(),
+  /** Present, and true, only when GeeTest was unreachable and passed the widget offline. */
+  isOffline: z.boolean().optional(),
+});
+
 export const altchaOutput = baseSolveOutput.extend({
   /** The base64 payload to submit in the site's `altcha` form field, verbatim. */
   token: z.string(),
@@ -114,6 +125,11 @@ export const hCaptchaOutput = baseSolveOutput.extend({
 
 export const mtCaptchaOutput = baseSolveOutput.extend({
   /** The token, v1(...), for the form's hidden `mtcaptcha-verifiedtoken` field. */
+  token: z.string(),
+});
+
+export const yandexSmartOutput = baseSolveOutput.extend({
+  /** The token for the form's hidden `smart-token` field. */
   token: z.string(),
 });
 

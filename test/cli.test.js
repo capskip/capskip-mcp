@@ -27,11 +27,13 @@ test('the built entrypoint serves tools over stdio', async () => {
       'capskip_solve_datadome',
       'capskip_solve_friendly_captcha',
       'capskip_solve_geetest',
+      'capskip_solve_geetest_v4',
       'capskip_solve_hcaptcha',
       'capskip_solve_image_captcha',
       'capskip_solve_mtcaptcha',
       'capskip_solve_recaptcha',
       'capskip_solve_turnstile',
+      'capskip_solve_yandex_smart',
       'capskip_status',
     ]);
   } finally {

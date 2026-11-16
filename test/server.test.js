@@ -20,6 +20,8 @@ const SOLVE_TOOLS = [
   'capskip_solve_datadome',
   'capskip_solve_hcaptcha',
   'capskip_solve_mtcaptcha',
+  'capskip_solve_geetest_v4',
+  'capskip_solve_yandex_smart',
 ];
 
 test('the advertised version matches package.json', async () => {

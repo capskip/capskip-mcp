@@ -113,6 +113,23 @@ const HCAPTCHA_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebK
 const MTCAPTCHA_TOKEN = 'v1(0f3c9e2a,7b1d4c88,MTPublic-KzqLY1cKH,5e0c2a9f61d84b37a0c1e9b2d6f4a873,'
   + 'Qm9ndXNUb2tlbkZvclRlc3RzT25seV9fTm90QVJlYWxNVENhcHRjaGFUb2tlbi1BYkNkRWZHaA**)';
 
+// GeeTest v4, as CapSkip's res.php answers it: `request` is the five values as
+// a JSON *string*, in json=1 mode too, with the inner quotes written as ".
+const GEETEST_V4_SOLUTION = {
+  captcha_id: '54088bb07d2df3c46b79f80300b0abbe',
+  lot_number: '7c1a4f0e9b2d48a6b3e5f7d9c1a3b5e7',
+  pass_token: '2f6c0e4a8b1d5f9e3c7a0b4d8e2f6a1c5b9d3e7f0a4c8b2e6d1f5a9c3e7b0d4f8',
+  gen_time: '1793001600',
+  captcha_output: 'TM-rSt-9GZ_6s_5-dyAo3ZzQxZ3nhs8agozV1dXHM52rdKikcSbx6m9Z_vx1YtexMiouzC-83byvGlGzNTrsCk6EaDdzrugpzIevLISL7vRvwymvNEQ-NUfQM_PoUHAgWIs1w==',
+};
+const GEETEST_V4_CODE = JSON.stringify(GEETEST_V4_SOLUTION);
+
+// Yandex SmartCaptcha: the bare token. A real one is base64 of
+// t=...;i=<solver IP>;D=...; this one carries a documentation address.
+const YANDEX_TOKEN = 'dD0xNzk0NDE5NTg3O2k9MjAzLjAuMTEzLjI1O0Q9QjQ1RjJBN0MxRTkwRDM2ODU0QzA1M0M3QTFF'
+  + 'MkIzQzRENUU2RjcwODE5MkEzQjRDNUQ2RTdGODA5MUEyQjNDNEQ1RTZGNzA4MTt1PTE3OTQ0MTk1'
+  + 'ODcxMjM0NTY3ODk7aD01ZjBjMmE5ZTYxZDg0YjM3YTBjMWU5YjJkNmY0YTg3Mw==';
+
 const ALTCHA_TOKEN = 'eyJhbGdvcml0aG0iOiJTSEEtMjU2IiwiY2hhbGxlbmdlIjoiM2RkMjgyNTNiZTZjYzBjNTRkOTVmN2Y5OGM1MTdlNjgiLCJudW1iZXIiOjk2NjEsInNhbHQiOiI0NmQ1YjFjODg3MWU1MTUyZDkwMmVlM2Y/ZXhwaXJlcz0xODkzNDU2MDAwIiwic2lnbmF0dXJlIjoiNGIxY2YwZTBiZTBmNGU1MjQ3ZTUwYjBmOWE0NDk4MzAiLCJ0b29rIjoxNi41OH0=';
 
 // The other ALTCHA generation. A proof-of-work v2 answer has no top-level
@@ -238,6 +255,23 @@ function createMockServer() {
       } else {
         send(res, `OK|${HCAPTCHA_TOKEN}`);
       }
+    } else if (idType[cid] === 'geetest_v4') {
+      // An offline pass carries isOffline as well; routed off the page URL.
+      const code = cid.startsWith('gt4offline')
+        ? JSON.stringify({ ...GEETEST_V4_SOLUTION, isOffline: true })
+        : GEETEST_V4_CODE;
+      if (wantJson) {
+        send(res, JSON.stringify({ status: 1, request: code }).replace(/\\"/g, '\\u0022'),
+          'application/json');
+      } else {
+        send(res, `OK|${code}`);
+      }
+    } else if (idType[cid] === 'yandex') {
+      if (wantJson) {
+        send(res, JSON.stringify({ status: 1, request: YANDEX_TOKEN }), 'application/json');
+      } else {
+        send(res, `OK|${YANDEX_TOKEN}`);
+      }
     } else if (idType[cid] === 'mt_captcha' || idType[cid] === 'mtcaptcha') {
       if (wantJson) {
         send(res, JSON.stringify({ status: 1, request: MTCAPTCHA_TOKEN }), 'application/json');
@@ -317,6 +351,24 @@ function createMockServer() {
       return;
     }
 
+    // CapSkip's own Yandex SmartCaptcha checks, and GeeTest v4's. The SDK refuses
+    // these first, so reaching here with one means local validation slipped.
+    if (fields.method === 'yandex') {
+      if (!/^[A-Za-z0-9_-]{16,120}$/.test(fields.sitekey || '')) {
+        send(res, 'ERROR_BAD_PARAMETERS');
+        return;
+      }
+      if (!/^https?:\/\/[^/]+/.test(fields.pageurl || '')) {
+        send(res, 'ERROR_PAGEURL');
+        return;
+      }
+    }
+    if (fields.method === 'geetest_v4'
+        && (!fields.captcha_id || fields.gt !== undefined || fields.challenge !== undefined)) {
+      send(res, 'ERROR_BAD_PARAMETERS');
+      return;
+    }
+
     const pageurl = fields.pageurl || '';
     ids += 1;
     let cid;
@@ -333,6 +385,8 @@ function createMockServer() {
       // request with a v2-shaped token — a single opaque AQQA. string of
       // roughly six kilobytes rather than v1's four dot-separated parts.
       cid = `friendlyv2${ids}`;
+    } else if (fields.method === 'geetest_v4' && pageurl.includes('offline')) {
+      cid = `gt4offline${ids}`;
     } else if (pageurl.includes('rawanswer')) {
       cid = `raw${ids}`;
     } else {
@@ -404,6 +458,9 @@ module.exports = {
   DATADOME_LIST_PROXY,
   HCAPTCHA_TOKEN,
   MTCAPTCHA_TOKEN,
+  GEETEST_V4_SOLUTION,
+  GEETEST_V4_CODE,
+  YANDEX_TOKEN,
   HCAPTCHA_RESP_KEY,
   HCAPTCHA_USER_AGENT,
   CAPTCHAFOX_TOKEN,

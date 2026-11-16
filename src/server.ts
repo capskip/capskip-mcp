@@ -9,15 +9,17 @@ import { registerCaptchaFoxTool } from './tools/captchafox.js';
 import { registerCapyTool } from './tools/capy.js';
 import { registerFriendlyCaptchaTool } from './tools/friendlycaptcha.js';
 import { registerGeetestTool } from './tools/geetest.js';
+import { registerGeetestV4Tool } from './tools/geetestv4.js';
 import { registerHCaptchaTool } from './tools/hcaptcha.js';
 import { registerImageTool } from './tools/image.js';
 import { registerMtCaptchaTool } from './tools/mtcaptcha.js';
 import { registerRecaptchaTool } from './tools/recaptcha.js';
 import { registerStatusTool } from './tools/status.js';
 import { registerTurnstileTool } from './tools/turnstile.js';
+import { registerYandexSmartTool } from './tools/yandexsmart.js';
 
 export const SERVER_NAME = 'capskip';
-export const SERVER_VERSION = '1.6.0';
+export const SERVER_VERSION = '1.7.0';
 
 /** Build a fully-registered MCP server. Does not connect a transport. */
 export function createServer(config: CapSkipConfig): McpServer {
@@ -29,15 +31,20 @@ export function createServer(config: CapSkipConfig): McpServer {
         + 'tools when browser automation is blocked by a captcha: read the sitekey '
         + 'from the page, call the matching tool, then place the returned token in '
         + "the page's response field. CapSkip solves image captchas, reCAPTCHA v2 "
-        + 'and v3, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, '
-        + 'Friendly Captcha, AWS WAF (Amazon WAF), DataDome, hCaptcha and MTCaptcha — it cannot '
+        + 'and v3, Cloudflare Turnstile, GeeTest v3 and v4, ALTCHA, Capy Puzzle, CaptchaFox, '
+        + 'Friendly Captcha, AWS WAF (Amazon WAF), DataDome, hCaptcha, MTCaptcha and '
+        + 'Yandex SmartCaptcha — it cannot '
         + 'solve FunCaptcha/Arkose, so do not call these tools for that. hCaptcha and '
         + 'reCAPTCHA both carry a data-sitekey: a widget rendered as '
         + '<div class="h-captcha" data-sitekey="…"> or loaded from js.hcaptcha.com is '
         + 'hCaptcha and takes capskip_solve_hcaptcha, while class="g-recaptcha" takes '
         + 'capskip_solve_recaptcha. An MTCaptcha widget (a mtcaptchaConfig object with an '
         + "'MTPublic-' sitekey, or an iframe from service.mtcaptcha.com) takes "
-        + 'capskip_solve_mtcaptcha, not capskip_solve_image_captcha. '
+        + 'capskip_solve_mtcaptcha, not capskip_solve_image_captcha. GeeTest v3 (gt and '
+        + 'challenge, gt.js) takes capskip_solve_geetest; GeeTest v4 (a captcha_id, '
+        + 'gt4.js and initGeetest4) takes capskip_solve_geetest_v4. A Yandex SmartCaptcha '
+        + 'widget (from smartcaptcha.yandexcloud.net, a smart-token field) takes '
+        + 'capskip_solve_yandex_smart. '
         + 'If a solve fails unexpectedly, call capskip_status to check CapSkip is '
         + 'running.',
     },
@@ -58,6 +65,8 @@ export function createServer(config: CapSkipConfig): McpServer {
   registerDataDomeTool(server, ctx);
   registerHCaptchaTool(server, ctx);
   registerMtCaptchaTool(server, ctx);
+  registerGeetestV4Tool(server, ctx);
+  registerYandexSmartTool(server, ctx);
 
   return server;
 }

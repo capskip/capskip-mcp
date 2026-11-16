@@ -5,7 +5,7 @@
 [![Tests](https://github.com/capskip/capskip-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/capskip/capskip-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/capskip-mcp.svg)](https://www.npmjs.com/package/capskip-mcp)
 
-**A captcha solver [MCP](https://modelcontextprotocol.io) server that lets AI agents solve reCAPTCHA, Cloudflare Turnstile, GeeTest, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, AWS WAF, DataDome, hCaptcha, MTCaptcha and image captchas instead of stalling on them.**
+**A captcha solver [MCP](https://modelcontextprotocol.io) server that lets AI agents solve reCAPTCHA, Cloudflare Turnstile, GeeTest, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, AWS WAF, DataDome, hCaptcha, MTCaptcha, Yandex SmartCaptcha and image captchas instead of stalling on them.**
 
 Works with Claude Desktop, Claude Code, Cursor, VS Code, and any Model Context Protocol client. Powered by [CapSkip](https://capskip.com) — a **local captcha solver** that runs on your own machine, licensed once rather than billed per solve.
 
@@ -17,7 +17,7 @@ npx -y capskip-mcp
 
 ## What this solves
 
-An AI agent driving a browser hits a captcha and stops. This server gives it thirteen tools so it can read the sitekey, solve the challenge, and carry on — without a human stepping in and without a per-solve API bill.
+An AI agent driving a browser hits a captcha and stops. This server gives it fifteen tools so it can read the sitekey, solve the challenge, and carry on — without a human stepping in and without a per-solve API bill.
 
 CapSkip runs as a desktop app exposing a captcha-solving HTTP API on `127.0.0.1:8080`. `capskip-mcp` is a thin translation layer over that API: the fifth official CapSkip client, alongside the [Python](https://github.com/capskip/capskip-python), [Node.js](https://github.com/capskip/capskip-node), [PHP](https://github.com/capskip/capskip-php) and [.NET](https://github.com/capskip/capskip-dotnet) SDKs.
 
@@ -31,6 +31,7 @@ CapSkip runs as a desktop app exposing a captcha-solving HTTP API on `127.0.0.1:
 | **reCAPTCHA v3 solver** | `capskip_solve_recaptcha` | Pass `version: "v3"` and the page's `action` |
 | **Cloudflare Turnstile solver** | `capskip_solve_turnstile` | Widget and interstitial challenge pages |
 | **GeeTest v3 solver** | `capskip_solve_geetest` | Slide puzzle; returns challenge/validate/seccode |
+| **GeeTest v4 solver** | `capskip_solve_geetest_v4` | Every v4 challenge type; needs only the `captcha_id`, returns the five values the site verifies |
 | **ALTCHA solver** | `capskip_solve_altcha` | Proof-of-work; returns the token for the `altcha` field |
 | **Capy Puzzle solver** | `capskip_solve_capy` | Slide puzzle; returns three form values, not a token |
 | **CaptchaFox solver** | `capskip_solve_captchafox` | Returns the token for the `cf-captcha-response` field |
@@ -39,6 +40,7 @@ CapSkip runs as a desktop app exposing a captcha-solving HTTP API on `127.0.0.1:
 | **DataDome solver** (slider and device check) | `capskip_solve_datadome` | Returns the `datadome` cookie, tied to one IP and one User-Agent |
 | **hCaptcha solver** (checkbox, invisible and Enterprise) | `capskip_solve_hcaptcha` | Returns the token for `h-captcha-response`; pass `invisible: true` or the Enterprise `data` when the page needs them |
 | **MTCaptcha solver** (text captcha) | `capskip_solve_mtcaptcha` | Returns the token for `mtcaptcha-verifiedtoken`; the sitekey starts with `MTPublic-` |
+| **Yandex SmartCaptcha solver** | `capskip_solve_yandex_smart` | Returns the token for `smart-token`; the sitekey usually starts with `ysc1_` |
 | **Image captcha solver** (text/OCR) | `capskip_solve_image_captcha` | File path, URL, data URI, or base64 |
 
 **Not supported: FunCaptcha/Arkose.** There is no tool for it. hCaptcha and reCAPTCHA both carry a `data-sitekey`, so check the widget before choosing a tool: `class="h-captcha"` or a `js.hcaptcha.com` script takes `capskip_solve_hcaptcha`, `class="g-recaptcha"` takes `capskip_solve_recaptcha`.
@@ -84,7 +86,7 @@ No install step — `npx` fetches and runs it on demand.
 
 ### 3. Restart your client
 
-It should list thirteen tools, all prefixed `capskip_`.
+It should list fifteen tools, all prefixed `capskip_`.
 
 ### 4. Ask your agent to solve a captcha
 
@@ -128,6 +130,8 @@ CapSkip exposes the familiar `in.php` / `res.php` endpoints, so it works as a **
 | `capskip_solve_datadome` | Pass a DataDome challenge and get its cookie | `captcha_url`, `url` |
 | `capskip_solve_hcaptcha` | Solve an hCaptcha widget (checkbox, invisible, Enterprise) | `sitekey`, `url` |
 | `capskip_solve_mtcaptcha` | Solve an MTCaptcha text captcha | `sitekey`, `url` |
+| `capskip_solve_geetest_v4` | Solve a GeeTest v4 captcha | `captcha_id`, `url` |
+| `capskip_solve_yandex_smart` | Solve a Yandex SmartCaptcha | `sitekey`, `url` |
 
 > **There is no `min_score` parameter on `capskip_solve_recaptcha`.** reCAPTCHA v3 scores are assigned by Google from signals no solver has access to — local or cloud, none can raise a score after the fact. A `min_score` option would promise control that does not exist, so it is deliberately left out. Passing it anyway is rejected as an unrecognized key, not silently ignored.
 
@@ -167,7 +171,7 @@ For non-agent scripts, use the language SDKs directly — see the [Playwright](h
 | `CAPSKIP_HOST` | `127.0.0.1` | CapSkip host |
 | `CAPSKIP_PORT` | `8080` | API port from CapSkip settings |
 | `CAPSKIP_TIMEOUT` | `120` | Default `timeout` for the image / ALTCHA / Capy / MTCaptcha tools, seconds |
-| `CAPSKIP_RECAPTCHA_TIMEOUT` | `300` | Default `timeout` for the reCAPTCHA / Turnstile / GeeTest / CaptchaFox / Friendly Captcha / AWS WAF / DataDome / hCaptcha tools, seconds |
+| `CAPSKIP_RECAPTCHA_TIMEOUT` | `300` | Default `timeout` for the reCAPTCHA / Turnstile / GeeTest / CaptchaFox / Friendly Captcha / AWS WAF / DataDome / hCaptcha / GeeTest v4 / Yandex SmartCaptcha tools, seconds |
 
 ALTCHA and Capy use `CAPSKIP_TIMEOUT`, not the reCAPTCHA one — neither
 is a browser solve. ALTCHA is CPU proof-of-work measured in milliseconds; a Capy
@@ -212,6 +216,8 @@ Every solve tool returns a human-readable text block and `structuredContent` mat
 - **`capskip_solve_datadome`** adds `cookie` (the `datadome=...` pair for a Cookie header; `code` keeps the full Set-Cookie value), `userAgent` (the one the cookie was earned with) and, **only when you passed no proxy and CapSkip solved through its own DataDome proxy list**, `proxy` as `host:port`. The cookie belongs to one IP and one User-Agent: repeat the request with that User-Agent, from the same address — through the proxy you passed, through the reported `proxy`, or from this machine when neither applies. The text reply spells out which.
 - **`capskip_solve_hcaptcha`** adds `token`, for the hidden `h-captcha-response` field (and `g-recaptcha-response`, if the form has one), `respKey` (the second value hCaptcha hands the widget; most sites never read it, and it can be empty) and `userAgent`, the one the token was earned with. Submit the form with that User-Agent, promptly: tokens are single use and expire about two minutes after they are issued.
 - **`capskip_solve_mtcaptcha`** adds `token`, `v1(...)`, for the hidden `mtcaptcha-verifiedtoken` field.
+- **`capskip_solve_geetest_v4`** adds `captcha_id`, `lot_number`, `pass_token`, `gen_time` and `captcha_output`, the five values the site verifies, to send under those same names; `code` keeps them as the raw JSON string. `isOffline: true` appears only when GeeTest could not be reached and passed the widget offline.
+- **`capskip_solve_yandex_smart`** adds `token`, for the hidden `smart-token` field. It is valid for five minutes and can be checked once.
 
 Long solves emit MCP progress notifications, so a 45-second reCAPTCHA does not trip your client's tool-call timeout.
 
@@ -254,7 +260,7 @@ The MCP server is MIT-licensed and free. It requires the CapSkip desktop app, wh
 
 ### Which captchas can it solve?
 
-reCAPTCHA v2 (checkbox and invisible), reCAPTCHA v3, reCAPTCHA Enterprise, Cloudflare Turnstile, GeeTest v3, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, AWS WAF (Amazon WAF), DataDome, hCaptcha (including invisible and Enterprise), MTCaptcha, and image/text captchas. FunCaptcha/Arkose is not supported.
+reCAPTCHA v2 (checkbox and invisible), reCAPTCHA v3, reCAPTCHA Enterprise, Cloudflare Turnstile, GeeTest v3 and v4, ALTCHA, Capy Puzzle, CaptchaFox, Friendly Captcha, AWS WAF (Amazon WAF), DataDome, hCaptcha (including invisible and Enterprise), MTCaptcha, Yandex SmartCaptcha, and image/text captchas. FunCaptcha/Arkose is not supported.
 
 ### Why does my reCAPTCHA v3 token get a low score?
 

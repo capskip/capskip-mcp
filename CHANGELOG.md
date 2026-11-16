@@ -10,6 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Nothing yet. Add entries here as changes land; they move into a version
 section at release time.
 
+## [1.7.0] - 2026-11-16
+
+### Added
+
+- **`capskip_solve_geetest_v4`** — solve a GeeTest v4 captcha from its
+  `captcha_id` and `url` alone; optional `risk_type` and `proxy`. The result
+  carries `captcha_id`, `lot_number`, `pass_token`, `gen_time` and
+  `captcha_output`, the five values the site verifies, and `isOffline: true`
+  on an offline pass. `code` keeps the raw JSON string.
+- **`capskip_solve_yandex_smart`** — solve a Yandex SmartCaptcha and get its
+  token. Requires `sitekey` and `url`; optional `userAgent` and `proxy`. The
+  result carries `token` (also as `code`), and the text reply names the form
+  field it goes in, `smart-token`. A proxy's login is never echoed back.
+- Output schemas `geetestV4Output` and `yandexSmartOutput`.
+
+### Changed
+
+- Requires `capskip` (the Node SDK) `^1.8.0`, which is where `geetestV4()` and
+  `yandexSmart()` live.
+- The server's instructions name GeeTest v4 and Yandex SmartCaptcha and say how
+  to tell GeeTest v3 from v4.
+
+### Notes
+
+- Both tools take `CAPSKIP_RECAPTCHA_TIMEOUT`: each is passed in a real browser.
+
 ## [1.6.0] - 2026-11-10
 
 ### Added
